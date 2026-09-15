@@ -1,0 +1,19 @@
+[project]
+name = "comfyui-mediabrowser"
+description = "给 ComfyUI 的资源加载节点加媒体浏览器：文件夹浏览、瀑布流、收藏、提示词提取、工作流载入、预览遮蔽与截图。"
+version = "1.0.0"
+# 显式指向仓库中的许可证文件，便于 Registry 校验发行元数据。
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+# 复用 ComfyUI 环境中的 Pillow 与 aiohttp；视频封面使用环境中已有的 ffmpeg。
+# 不额外声明这些依赖，避免改变用户现有的 ComfyUI 依赖版本。
+dependencies = []
+
+[project.urls]
+Repository = "https://github.com/xinsulab/ComfyUI-MediaBrowser"
+
+[tool.comfy]
+# registry.comfy.org 中的唯一发布者标识。
+PublisherId = "xinsulab"
+DisplayName = "浏览资源 · MediaBrowser"
+Icon = ""

@@ -1,0 +1,4 @@
+# 统一文本换行符，避免跨平台检出无意义的整文件差异。
+* text=auto eol=lf
+*.png binary
+*.webp binary

@@ -1,0 +1,15 @@
+# 运行时模型、检测结果与缩略图缓存均为本机数据。
+_thumbcache/
+_models/
+_regions/
+__pycache__/
+*.pyc
+.pytest_cache/
+# 测试运行时生成的临时目录。
+tests/_fixture/
+
+# IDE
+.idea/
+
+# 本地工作流草稿不属于插件发行物。
+.spec-workflow/

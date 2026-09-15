@@ -1,0 +1,7 @@
+# 发布包只包含插件运行文件和许可、使用说明。
+.github/
+tests/
+tools/
+docs/
+AGENTS.md
+CLAUDE.md
