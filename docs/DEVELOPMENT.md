@@ -6,11 +6,13 @@
 
 - `__init__.py`：ComfyUI 插件入口、媒体列表、缩略图、元数据、工作流、回收站和缓存接口。
 - `censor.py`：可选 ONNX 检测器、模型下载、检测结果缓存和运行时生命周期。
-- `web/mediabrowser.js`：当前主线实际加载的前端入口，包含节点接入、浏览窗口和交互逻辑。
+- `web/mediabrowser.js`：当前主线实际加载的前端入口，包含浮钮入口、多开浏览窗、节点选片和交互逻辑。
 - `web/mb-icons.css`：插件自带的 Lucide 与 Phosphor 图标，避免依赖 ComfyUI 内部 CSS 产物。
 - `tests/`：Python 行为测试、契约测试和由 Node.js 执行的前端生命周期测试。
 
 ComfyUI 会扫描扩展目录中的 JavaScript。新增前端文件前必须确认加载顺序和运行方式；测试使用的 `.mjs` 位于 `tests/`，不会作为扩展入口加载。如需拆分前端入口，应以当前行为测试作为兼容基线。
+
+页面级「MB」浮钮在 `setup()` 里挂到 `document.body`，与加载节点按钮并存。浏览窗是独立浮窗，不是全屏遮罩；同时打开的上限是 `PICKER_MAX`（当前 5，改为 `0` 表示不限制）。浏览窗的 z-index 在 `10001–10027` 之间重排，必须低于浮钮 `10028`，也低于大图 / 菜单 / 确认框。关窗会 `abort` 该窗未完成的 `/mediabrowser/list`。列表、缩略图、预览、回收站仍走本插件的 Python 路由，ComfyUI 后端不可用时不能扫盘，界面要换成失败说明而不是留着骨架格。
 
 ## 后端接口
 
@@ -50,6 +52,7 @@ python -m pytest -q
 可单独执行以下前端测试：
 
 ```bash
+node tests/run_picker_session.mjs web/mediabrowser.js
 node tests/run_place_helpers.mjs web/mediabrowser.js
 node tests/run_layer_stack.mjs web/mediabrowser.js
 node tests/run_list_lifecycle.mjs web/mediabrowser.js

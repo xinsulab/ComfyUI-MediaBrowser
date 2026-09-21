@@ -13,3 +13,6 @@ tests/_fixture/
 
 # 本地工作流草稿不属于插件发行物。
 .spec-workflow/
+
+# 本机过程笔记，不属于发行内容。
+docs/local/

@@ -833,6 +833,8 @@ def test_restoring_defaults_actually_restores_the_live_window():
         ("setTouch(auto, false)", "触屏状态没有通过统一入口同步到面板与 html"),
         ("scopeWithRoot(", "浏览范围不会回到节点默认真实目录"),
         ("syncScopeButtons()", "收藏/最近按钮会留下错误激活态"),
+        ("mediabrowser.fab.pos", "浮钮位置不会跟着回默认，得刷新页面才生效"),
+        ("resetFabToDefault()", "清掉浮钮坐标后当前页面上的钮不会自己回去"),
     ):
         assert need in body, f"applyPrefsLive 少了 {need} —— {why}"
 

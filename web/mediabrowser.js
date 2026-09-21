@@ -97,15 +97,25 @@ const GAP = 10;
 const BUF = 2;
 
 const css = `
-.mb-mask{position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:10000;
-  display:flex;align-items:center;justify-content:center;}
-.mb-box{position:relative;width:min(1180px,92vw);height:min(820px,88vh);background:#1e1e1e;
+.mb-mask{position:fixed;z-index:10000;background:transparent;display:block;
+  pointer-events:none;}
+.mb-box{pointer-events:auto;position:relative;width:min(1180px,92vw);height:min(820px,88vh);background:#1e1e1e;
   border:1px solid #444;border-radius:10px;display:flex;flex-direction:column;
   box-shadow:0 18px 50px rgba(0,0,0,.6);overflow:hidden;
   container:mb-picker / inline-size;
   min-width:min(var(--mb-min-w,460px),98vw);min-height:min(var(--mb-min-h,340px),96vh);
   max-width:98vw;max-height:96vh;}
-/* 八向缩放。不做拖动位置：模态选择器开一下就关，标题栏更占纵向空间。 */
+.mb-fab{position:fixed;z-index:10028;width:48px;height:48px;padding:0;border:1px solid #c9a227;
+  border-radius:14px;background:#161616;color:#e6c35c;font:700 15px/48px ui-sans-serif,system-ui,sans-serif;
+  letter-spacing:.04em;text-align:center;cursor:grab;box-shadow:0 8px 24px rgba(0,0,0,.45);
+  user-select:none;touch-action:none;}
+.mb-fab:active,.mb-fab.dragging{cursor:grabbing;}
+.mb-fab:focus-visible{outline:2px solid #e6c35c;outline-offset:3px;}
+:where(html:not(.mb-touch)) .mb-fab:hover{background:#1c1c1c;border-color:#e0c14a;color:#ffe08a;}
+.mb-empty{padding:28px 18px;color:#bbb;font-size:13px;line-height:1.55;}
+.mb-top{cursor:grab;}
+.mb-top button,.mb-top input,.mb-top select,.mb-top label{cursor:pointer;}
+/* 八向缩放。浮窗有 left/top，从西/北拉时要一起改位置。 */
 .mb-rz{position:absolute;z-index:6;}
 .mb-rz.n {top:-4px;left:10px;right:10px;height:8px;cursor:ns-resize;}
 .mb-rz.s {bottom:-4px;left:10px;right:10px;height:8px;cursor:ns-resize;}
@@ -123,7 +133,7 @@ const css = `
 .mb-box.rzing .mb-rz{pointer-events:auto;}
 .mb-top{display:flex;flex-direction:column;align-items:stretch;gap:0;
   padding:8px 11px;border-bottom:1px solid #383838;background:#252525;flex:0 0 auto;
-  position:relative;}
+  position:relative;cursor:grab;}
 .mb-top-head{display:flex;align-items:flex-start;gap:8px;}
 .mb-top-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;flex:1;min-width:0;}
 /* 收藏/最近是“当前真实目录的视图”，常驻在目录旁边才不会藏进下拉后失去入口。
@@ -371,11 +381,11 @@ const css = `
 :where(html:not(.mb-touch)) .mb-settings .purge .go:hover{background:#8a3030;}
 .mb-bot .mb-act{color:#7fb3f0;cursor:pointer;text-decoration:underline;margin-left:8px;}
 :where(html:not(.mb-touch)) .mb-bot .mb-act:hover{color:#fff;}
-.mb-toast{position:fixed;top:16%;left:50%;transform:translateX(-50%);z-index:10021;
+.mb-toast{position:fixed;top:16%;left:50%;transform:translateX(-50%);z-index:10055;
   background:#222;border:1px solid #5a8dd6;color:#eee;padding:10px 18px;
   border-radius:8px;font-size:13px;box-shadow:0 10px 32px rgba(0,0,0,.55);
   pointer-events:none;max-width:min(520px,86vw);}
-.mb-confirm{position:fixed;inset:0;z-index:10030;background:rgba(0,0,0,.55);
+.mb-confirm{position:fixed;inset:0;z-index:10060;background:rgba(0,0,0,.55);
   display:flex;align-items:center;justify-content:center;}
 .mb-confirm .card{width:min(420px,88vw);background:#1e1e1e;border:1px solid #5a4a2a;
   border-radius:10px;padding:16px 18px;color:#ddd;box-shadow:0 16px 40px rgba(0,0,0,.6);}
@@ -676,9 +686,9 @@ const css = `
 .mb-cell .nm .meta{color:#8b93a5;font-size:max(9px,calc(var(--mb-nm-fs,9px)*0.92));
   line-height:1.25;letter-spacing:.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 /* ── 视频播放浮层 ──
-   ⚠️ z-index 必须高于 .mb-mask(10000) 和 .mb-pop(10001)。少了这一行，
+   ⚠️ z-index 必须高于所有浏览窗和浮钮。少了这一行，
    播放器会被宫格盖住：视频照常加载、有声音，就是看不见 —— 症状不像样式问题，很难查。 */
-.mb-play{position:fixed;inset:0;z-index:10002;background:rgba(0,0,0,.9);
+.mb-play{position:fixed;inset:0;z-index:10040;background:rgba(0,0,0,.9);
   display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:0;}
 .mb-play .mb-stage{position:relative;flex:1 1 auto;min-height:0;width:100%;
   display:flex;align-items:center;justify-content:center;
@@ -783,7 +793,7 @@ const css = `
 /* 混合输入设备可能同时有鼠标和触屏，运行时识别到触摸后也要保持同一点击下限。 */
 .mb-touch .mb-top select,.mb-touch .mb-top button{min-height:40px;min-width:42px;}
 /* ── 提示词浮层 ── */
-.mb-pop{position:fixed;z-index:10020;width:min(540px,78vw);max-height:72vh;
+.mb-pop{position:fixed;z-index:10050;width:min(540px,78vw);max-height:72vh;
   display:flex;flex-direction:column;
   background:#1b1b1b;border:1px solid #4a4a4a;border-radius:10px;
   box-shadow:0 14px 40px rgba(0,0,0,.65);font-size:12px;color:#ddd;}
@@ -981,6 +991,34 @@ function makeLayerStack(hist) {
       try { close(); } finally { fromPop = false; }
       return true;
     },
+    /**
+     * 把一扇已经在栈里的浏览窗提到「浏览窗这一档」的最前。
+     * 不能无脑 push 到栈顶：大图 / 菜单压在上面时，后退键必须仍先关它们。
+     * 浏览窗用 close._mbPicker 标记；没标的就是覆盖层。
+     */
+    raise(close) {
+      const i = stack.indexOf(close);
+      if (i < 0) return;
+      stack.splice(i, 1);
+      let at = stack.length;
+      for (let j = 0; j < stack.length; j++) {
+        if (!stack[j]._mbPicker) { at = j; break; }
+      }
+      stack.splice(at, 0, close);
+    },
+    /**
+     * 按函数引用摘掉自己。关后面那扇窗时绝不能 pop 栈顶 ——
+     * 否则画面拆的是 A，历史弹掉的是 B，后退键会乱。
+     */
+    drop(close) {
+      if (fromPop) return;
+      const i = stack.indexOf(close);
+      if (i < 0) return;
+      stack.splice(i, 1);
+      if (!ours()) return;
+      selfBack++;
+      try { hist.back(); } catch { selfBack--; }
+    },
   };
 }
 /* LAYER_HELPERS_END */
@@ -1005,6 +1043,159 @@ const memoFor = (key, fallbackRoot) => {
     });
   }
   return memos.get(key);
+};
+
+/* PICKER_SESSION_BEGIN */
+// 同时开几扇窗是产品能力；5 是默认刹车，不是架构上限。
+// PICKER_MAX <= 0 视为不限制。每扇窗有自己的列表请求和缩略图池。
+var PICKER_MAX = 5;
+// 浏览窗 z 必须封在浮钮之下。.mb-mask 基底 10000，.mb-fab 是 10028。
+// 以前每次 focus 只做 z++，上限挡不住次数，开久了会盖住浮钮和大图。
+var PICKER_Z_BASE = 10000;
+var PICKER_Z_CAP = 10027;
+function restackPickerZ(sessions, base, cap) {
+  const n = sessions.length;
+  if (!n) return sessions;
+  const lo = (Number.isFinite(base) ? base : 10000) + 1;
+  const hi = Number.isFinite(cap) ? cap : lo;
+  if (hi <= lo) {
+    sessions.forEach((s, i) => { s.z = lo + i; });
+    return sessions;
+  }
+  if (n === 1) {
+    sessions[0].z = hi;
+    return sessions;
+  }
+  const span = hi - lo;
+  sessions.forEach((s, i) => {
+    s.z = lo + Math.round((i * span) / (n - 1));
+  });
+  return sessions;
+}
+function makePickerRegistry(maxOf) {
+  const sessions = [];
+  const limitOf = () => {
+    const n = Number(typeof maxOf === "function" ? maxOf() : maxOf);
+    if (!Number.isFinite(n) || n <= 0) return Infinity;
+    return n;
+  };
+  const restack = () => restackPickerZ(sessions, PICKER_Z_BASE, PICKER_Z_CAP);
+  return {
+    list: () => sessions.slice(),
+    count: () => sessions.length,
+    canOpen: () => sessions.length < limitOf(),
+    register(session) {
+      sessions.push(session);
+      restack();
+      return session;
+    },
+    unregister(id) {
+      const i = sessions.findIndex((s) => s.id === id);
+      if (i >= 0) sessions.splice(i, 1);
+      restack();
+    },
+    findByNode(node) {
+      if (!node) return null;
+      return sessions.find((s) => s.node === node) || null;
+    },
+    front() {
+      return sessions.length ? sessions[sessions.length - 1] : null;
+    },
+    focus(session) {
+      if (!session) return null;
+      const i = sessions.indexOf(session);
+      if (i >= 0) {
+        sessions.splice(i, 1);
+        sessions.push(session);
+      }
+      restack();
+      return session;
+    },
+  };
+}
+function pickerCascadePos(index, vw, vh, boxW, boxH, step) {
+  step = step || 36;
+  const x = Math.max(16, Math.min(vw - boxW - 16, 72 + index * step));
+  const y = Math.max(16, Math.min(vh - boxH - 16, 48 + index * step));
+  return { x, y };
+}
+function fabIsClick(dx, dy, threshold) {
+  threshold = threshold == null ? 6 : threshold;
+  return Math.hypot(dx, dy) < threshold;
+}
+function clampFabPos(x, y, vw, vh, size, margin) {
+  size = size || 48;
+  margin = margin == null ? 8 : margin;
+  return {
+    x: Math.min(Math.max(margin, x), Math.max(margin, vw - size - margin)),
+    y: Math.min(Math.max(margin, y), Math.max(margin, vh - size - margin)),
+  };
+}
+function defaultFabPos(vw, vh, size, margin) {
+  size = size || 48;
+  margin = margin == null ? 8 : margin;
+  return clampFabPos(16, vh - 64, vw, vh, size, margin);
+}
+function isServiceDownError(err) {
+  const msg = String(err && err.message != null ? err.message : err || "");
+  return /failed to fetch|networkerror|load failed|err_connection|econnrefused/i.test(msg);
+}
+function pickerMemoKey(canPick, spec, folder) {
+  return canPick ? `${spec?.kind ?? "any"}:${folder}` : "browse:any";
+}
+function windowResizeDelta(dir, dx, dy, start) {
+  let x = start.x, y = start.y, w = start.w, h = start.h;
+  if (dir.includes("e")) w = start.w + dx;
+  if (dir.includes("w")) { w = start.w - dx; x = start.x + dx; }
+  if (dir.includes("s")) h = start.h + dy;
+  if (dir.includes("n")) { h = start.h - dy; y = start.y + dy; }
+  return { x, y, w, h };
+}
+function consumePickerEsc(frontMask, myMask, hasConfirm, hasPlay, hasPop) {
+  // 确认框 / 大图 / 格子菜单都比浏览窗更前；它们自己听 Esc。
+  // 浏览窗若在捕获期先 stopImmediate，菜单就永远收不到键。
+  if (hasConfirm || hasPlay || hasPop) return false;
+  return !!myMask && frontMask === myMask;
+}
+function firePickerEscHandlers(handlers) {
+  // 复现「每个窗各挂一条 document keydown」：只让最前那扇 handle，
+  // 并且立刻停掉后面的监听。没有 stopImmediate 时，关完 A 后 front 变成 B，
+  // 同一发 Esc 会把 B 也关了。
+  const closed = [];
+  let stopped = false;
+  for (const h of handlers.slice()) {
+    if (stopped) break;
+    if (!consumePickerEsc(h.front(), h.mask, !!h.hasConfirm, !!h.hasPlay, !!h.hasPop)) continue;
+    h.close();
+    closed.push(h.id);
+    stopped = true;
+  }
+  return closed;
+}
+function clampWindowResize(edge, next, start, minW, minH, vw, vh) {
+  const w = Math.min(vw * 0.98, Math.max(minW, next.w));
+  const h = Math.min(vh * 0.96, Math.max(minH, next.h));
+  let x = next.x, y = next.y;
+  const dir = String(edge || "");
+  // 西/北向先按未夹紧的宽高算了 x/y；夹紧后必须钉住对边，否则窗口会往外跳。
+  if (dir.includes("w")) x = start.x + start.w - w;
+  if (dir.includes("n")) y = start.y + start.h - h;
+  return { x, y, w, h };
+}
+/* PICKER_SESSION_END */
+const pickerRegistry = makePickerRegistry(() => PICKER_MAX);
+const applyPickerLayer = (session) => {
+  if (session?.mask) session.mask.style.zIndex = String(session.z);
+};
+const restackPickerLayers = () => {
+  pickerRegistry.list().forEach(applyPickerLayer);
+};
+const focusPicker = (session) => {
+  if (!session) return;
+  pickerRegistry.focus(session);
+  restackPickerLayers();
+  // z-index 换序之后，后退键用的层栈也得换，否则 Esc 和 Back 会关掉不同的窗。
+  if (session.close) mbLayers.raise(session.close);
 };
 
 // 最近用过：存 localStorage，跨会话保留。你反复用同几张参考图，这个每天省事。
@@ -1521,6 +1712,11 @@ const MB_EN = {
   "返回上一层": "Back",
   "这一张的遮蔽力度、跳过、整张糊都在里面": "This item's censor level, skip and full blur are in here",
   "用这张": "Use this",
+  "打开媒体浏览器（再点一次会新开一扇）": "Open the media browser (click again to open another window)",
+  "最多同时打开 {n} 个窗口": "At most {n} windows can be open",
+  "请先关掉预览或确认框": "Close the preview or confirmation first",
+  "ComfyUI 服务不可用。列表和缩略图都要后端还在。": "ComfyUI is not reachable. Listing and thumbnails need the backend.",
+  "这一张的操作：看大图 / 收藏 / 遮蔽 / 删除…": "Actions for this item: large view / favourite / censor / delete…",
   "填进节点，并关掉浏览窗口": "Fills it into the node and closes the browser",
   "看大图 / 播放": "Large view / play",
   "看的是原文件；打开后可以左右翻（← →），滚轮放大缩小": "Shows the original file; use ← → to flip through, mouse wheel to zoom",
@@ -1645,9 +1841,9 @@ const MB_EN = {
   "局部记住的框。下次要点「局部」重检。": "Saved local boxes. Click Local again to re-detect.",
   "偏好": "Preferences",
   "恢复默认界面": "Reset interface",
-  "语言、格子、递归、类型、排序、点击行为、清晰度、遮蔽档位、滑条和检测并发。收藏和锁不动。": "Language, grid, recursive, types, sort, click action, thumbnail quality, censor mode, sliders and detect concurrency. Favorites and locks stay.",
+  "语言、格子、递归、类型、排序、点击行为、清晰度、遮蔽档位、滑条、检测并发和浮钮位置。收藏和锁不动。": "Language, grid, recursive, types, sort, click action, thumbnail quality, censor mode, sliders, detect concurrency and FAB position. Favorites and locks stay.",
   "恢复默认界面？": "Reset the interface?",
-  "语言、格子、排序、点一下图片的行为、缩略图清晰度、遮蔽档位、全部滑条和检测并发都会回到默认，不能撤销。收藏、锁、标记和缓存都不动。": "Language, grid, sort, click action, thumbnail quality, censor mode, every slider and detect concurrency go back to their defaults. This cannot be undone. Favorites, locks, marks and caches are untouched.",
+  "语言、格子、排序、点一下图片的行为、缩略图清晰度、遮蔽档位、全部滑条、检测并发和浮钮位置都会回到默认，不能撤销。收藏、锁、标记和缓存都不动。": "Language, grid, sort, click action, thumbnail quality, censor mode, every slider, detect concurrency and FAB position go back to their defaults. This cannot be undone. Favorites, locks, marks and caches are untouched.",
   "危险": "Danger",
   "清空收藏和标记": "Clear favorites and marks",
   "收藏、最近、钉住的目录、单张锁、跳过检测。": "Favorites, recent, pins, per-file locks, skip-detect.",
@@ -2495,7 +2691,7 @@ const PREF_KEYS = [
   REC_KEY, KINDS_KEY, SORT_KEY, PLACE_KEY, CENSOR_KEY, CENSOR_WAIT_KEY,
   CENSOR_THR_KEY, CENSOR_COVER_KEY, CENSOR_BLUR_KEY, CENSOR_CONCUR_KEY,
   "mediabrowser.size", "mediabrowser.masonry", "mediabrowser.boxsize", "mediabrowser.touch",
-  "mediabrowser.blur", THUMB_PX_KEY, MB_LANG_KEY,
+  "mediabrowser.blur", "mediabrowser.fab.pos", THUMB_PX_KEY, MB_LANG_KEY,
   CENSOR_LABELS_KEY, CENSOR_BREAST_COVER_KEY, THUMB_PER_CELL_KEY, CLICK_KEY,
 ];
 // 按**路径**存的单张标记。清「标记」时一起清。
@@ -2546,12 +2742,12 @@ const listSame = (a, b) => {
   });
 };
 
-async function listDir(folder, subfolder, recursive, sort, refresh) {
+async function listDir(folder, subfolder, recursive, sort, refresh, signal) {
   const p = new URLSearchParams({ type: folder, sort: sort || "time_desc" });
   if (subfolder) p.set("subfolder", subfolder);
   if (recursive) p.set("recursive", "1");
   if (refresh) p.set("refresh", "1");
-  const r = await fetch(`/mediabrowser/list?${p}`);
+  const r = await fetch(`/mediabrowser/list?${p}`, signal ? { signal } : {});
   const j = await r.json().catch(() => ({}));
   if (!r.ok || j.error) throw new Error(j.error || `HTTP ${r.status}`);
   return {
@@ -3104,7 +3300,7 @@ function openViewer(list, startIdx, root, onPick, hooks = {}) {
     stage.querySelector("video, audio")?.pause();
     lay.remove();
     document.removeEventListener("keydown", onKey, true);
-    mbLayers.pop();
+    mbLayers.drop(shut);
   };
   // ⚠️ 登记必须在 shut **声明之后**：写在上面 appendChild(lay) 那儿会撞 TDZ。
   //    症状还特别阴 —— 元素已经进 DOM 了，所以「大图打开了」，但后面的接线全没跑，
@@ -3112,7 +3308,7 @@ function openViewer(list, startIdx, root, onPick, hooks = {}) {
   mbLayers.push(shut);
   const onKey = (e) => {
     if (document.querySelector(".mb-confirm")) return;
-    if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); shut(); }
+    if (e.key === "Escape") { e.preventDefault(); e.stopImmediatePropagation(); shut(); }
     // 视频在播时方向键归播放器管（快进快退），别抢
     else if (e.key === "ArrowLeft" && e.target.tagName !== "VIDEO") { e.preventDefault(); e.stopPropagation(); go(-1); }
     else if (e.key === "ArrowRight" && e.target.tagName !== "VIDEO") { e.preventDefault(); e.stopPropagation(); go(1); }
@@ -3192,16 +3388,22 @@ function openViewer(list, startIdx, root, onPick, hooks = {}) {
   lay.querySelector(".cls").onclick = shut;
   lay.querySelector(".prev").onclick = () => go(-1);
   lay.querySelector(".next").onclick = () => go(1);
-  lay.querySelector(".pick").onclick = () => { shut(); onPick(list[idx]); };
+  const pickBtn = lay.querySelector(".pick");
+  if (typeof onPick === "function") {
+    pickBtn.onclick = () => { shut(); onPick(list[idx]); };
+  } else {
+    pickBtn.hidden = true;
+  }
 
   show();
 }
 
-function openPicker({ folder, spec, current, onPick }) {
-  // 同一类节点共用一份浏览状态：LoadImage 和 LoadImageOutput 虽然根不同，
-  // 但都是「挑图片」，分开记反而每次都要重新找路。
-  const memoKey = `${spec?.kind ?? "any"}:${folder}`;
-  const memo = memoFor(memoKey, folder);
+function openPicker({ folder, spec, current, onPick, node } = {}) {
+  // 选片窗按节点类型记路；纯浏览共用 browse:any，避免两扇对照窗抢同一份 cwd。
+  const canPick = typeof onPick === "function";
+  const memoKey = pickerMemoKey(canPick, spec, folder);
+  const memoStore = memoFor(memoKey, folder || "output");
+  const memo = Object.assign({}, memoStore);
   addStyle();
   const mask = document.createElement("div");
   mask.className = "mb-mask";
@@ -3291,9 +3493,25 @@ function openPicker({ folder, spec, current, onPick }) {
   };
 
   const box = mask.querySelector(".mb-box");
+  try {
+    const saved = loadJSON("mediabrowser.boxsize", null);
+    if (saved?.w > 400 && saved?.h > 300) {
+      box.style.width = saved.w + "px";
+      box.style.height = saved.h + "px";
+    }
+  } catch { /* 记不住尺寸就用默认 */ }
+  {
+    const br = box.getBoundingClientRect();
+    const pos = pickerCascadePos(
+      pickerRegistry.count(), window.innerWidth, window.innerHeight,
+      br.width || 800, br.height || 600, 36);
+    mask.style.left = pos.x + "px";
+    mask.style.top = pos.y + "px";
+  }
+  let session = null;
   // 鼠标样式跟着「点一下图片＝？」走，见上面那段 CSS
   const syncClickMode = () => {
-    const view = clickOpensViewer();
+    const view = !canPick || clickOpensViewer();
     box.classList.toggle("click-view", view);
     box.classList.toggle("click-pick", !view);
   };
@@ -3439,25 +3657,42 @@ function openPicker({ folder, spec, current, onPick }) {
     save(REC_KEY, rec.checked ? "1" : "0");
     save(SORT_KEY, sortSel.value);
     const savedScope = scopeMode || browseRoot;
-    Object.assign(memo, { q: input.value, cwd: virtualScope() ? "" : cwd,
+    Object.assign(memoStore, { q: input.value, cwd: virtualScope() ? "" : cwd,
                           rec: rec.checked, sort: sortSel.value, folder: savedScope,
                           root: browseRoot, scroll: scroll.scrollTop });
     savePlace(memoKey, savedScope, virtualScope() ? "" : cwd, browseRoot);
     closePop();
+    if (session) {
+      pickerRegistry.unregister(session.id);
+      restackPickerLayers();
+    }
     mask.remove();
-    document.removeEventListener("keydown", onKey);
+    document.removeEventListener("keydown", onKey, true);
     window.removeEventListener("resize", onResize);
-    mbLayers.pop();
+    mbLayers.drop(close);
   };
   // ⚠️ 必须在 close **声明之后**登记。写在上面 appendChild(mask) 那里会撞 TDZ
   //    （const 声明前访问直接抛 ReferenceError），窗口根本打不开 —— 实测踩过。
+  close._mbPicker = true;
   mbLayers.push(close);       // 后退键先关浏览窗口，而不是把整个 ComfyUI 页面带走
+  session = pickerRegistry.register({
+    id: "mb-p-" + Date.now().toString(36) + Math.random().toString(16).slice(2),
+    mode: canPick ? "pick" : "browse",
+    node: node || null,
+    mask, box, close,
+  });
+  restackPickerLayers();
   const onKey = (e) => {
     if (e.key !== "Escape") return;
-    if (document.querySelector(".mb-confirm")) return;
+    if (!consumePickerEsc(
+      pickerRegistry.front()?.mask, mask,
+      !!document.querySelector(".mb-confirm"),
+      !!document.querySelector(".mb-play"),
+      !!document.querySelector(".mb-pop"),
+    )) return;
     const set = box.querySelector(".mb-settings");
     e.preventDefault();
-    e.stopPropagation();
+    e.stopImmediatePropagation();
     if (set) {
       clearInterval(settingsPoll);
       settingsPoll = null;
@@ -3466,15 +3701,43 @@ function openPicker({ folder, spec, current, onPick }) {
     }
     close();
   };
-  document.addEventListener("keydown", onKey);
-  // 必须听 pointerdown：点浮层按钮之后浏览器会往「已经拆掉的浮层下面」
-  // 补一发 mousedown，落点常常是遮罩，整窗就被顺手关了。
-  mask.addEventListener("pointerdown", (e) => { if (e.target === mask) close(); });
+  document.addEventListener("keydown", onKey, true);
+  // 点窗体提到最前。没有全屏遮罩了，点外侧不再关窗。
+  box.addEventListener("pointerdown", (e) => {
+    e.stopPropagation();
+    focusPicker(session);
+  });
   // 包一层箭头：这行在 closePop 的 const 声明之前，直接传引用会撞 TDZ
   scroll.addEventListener("pointerdown", () => { if (pop) closePop(); });
-  box.addEventListener("pointerdown", (e) => e.stopPropagation());
   box.addEventListener("mousedown", (e) => e.stopPropagation());
-  mask.querySelector('[data-act="close"]').onclick = close;
+  mask.querySelector('[data-act="close"]').onclick = () => {
+    focusPicker(session);
+    close();
+  };
+  box.querySelector(".mb-top").addEventListener("pointerdown", (ev) => {
+    if (ev.target.closest("button, input, select, label, textarea, a, .mb-rz")) return;
+    if (maximized) return;
+    focusPicker(session);
+    const r = mask.getBoundingClientRect();
+    const x0 = ev.clientX, y0 = ev.clientY, left0 = r.left, top0 = r.top;
+    const move = (e) => {
+      mask.style.left = (left0 + e.clientX - x0) + "px";
+      mask.style.top = (top0 + e.clientY - y0) + "px";
+    };
+    const up = (e) => {
+      document.removeEventListener("pointermove", move);
+      document.removeEventListener("pointerup", up);
+      const cur = mask.getBoundingClientRect();
+      const vw = window.innerWidth, vh = window.innerHeight;
+      const x = Math.min(Math.max(cur.left, 16 - cur.width + 48), vw - 48);
+      const y = Math.min(Math.max(cur.top, 8), vh - 48);
+      mask.style.left = x + "px";
+      mask.style.top = y + "px";
+    };
+    document.addEventListener("pointermove", move);
+    document.addEventListener("pointerup", up);
+    ev.preventDefault();
+  });
 
   // items 是「文件夹 + 图片」的混合列表，文件夹排在前面
   let items = [];
@@ -3510,7 +3773,7 @@ function openPicker({ folder, spec, current, onPick }) {
     teardownPopDom();
     if (popLayerArmed) {
       popLayerArmed = false;
-      mbLayers.pop();            // 有层才退，重复调 closePop 不该把历史退多
+      mbLayers.drop(closePop);            // 有层才退，重复调 closePop 不该把历史退多
     }
   };
   // 浮层是挂在 document.body 上的（要能摆到浏览窗口外面去），所以
@@ -3532,7 +3795,7 @@ function openPicker({ folder, spec, current, onPick }) {
     const onKey = (e) => {
       if (e.key !== "Escape") return;
       e.preventDefault();
-      e.stopPropagation();          // 只关浮层，别顺手把整个浏览窗口也关了
+      e.stopImmediatePropagation();          // 只关浮层，别顺手把整个浏览窗口也关了
       closePop();
     };
     document.addEventListener("pointerdown", onDown, true);
@@ -3545,6 +3808,7 @@ function openPicker({ folder, spec, current, onPick }) {
 
   // 选中并关窗。原来这段长在格子的 onclick 里，现在按钮和格子都要用，抽出来。
   const pickNow = (path) => {
+    if (!canPick) return;
     if (!acceptable(path)) {
       // 不拦着不说明是死胡同；说清为什么、以及怎么才能用
       flash(t("这个节点只收{kind}，选不了 {ext}。", {
@@ -3593,7 +3857,7 @@ function openPicker({ folder, spec, current, onPick }) {
       ensureLocal: (pp, force) => ensureLocal(pp, !!force),
       trashOne: (pp) => trashCurrent(pp),
     };
-    openViewer(files, Math.max(0, files.indexOf(path)), realRoot(), pickNow, hooks);
+    openViewer(files, Math.max(0, files.indexOf(path)), realRoot(), canPick ? pickNow : null, hooks);
   };
 
   // ── 一项能做的事：全站只在这里列一次 ────────────────────────────
@@ -3613,15 +3877,19 @@ function openPicker({ folder, spec, current, onPick }) {
       ? { lab: t("取消收藏"), effect: t("从收藏列表里移走") }
       : { lab: t("收藏"), effect: t("钉进收藏列表，不会被新的挤掉") });
 
-    const A = [{
+    const A = [];
+    if (canPick) {
+      A.push({
       id: "pick", ico: "lucide--check", cls: "pick" + (usable ? "" : " bad"),
       lab: t("用这张"), short: t("用这张"), effect: t("填进节点，并关掉浏览窗口"),
       act: () => pickNow(path),
-    }, {
+      });
+    }
+    A.push({
       id: "view", ico: "lucide--zoom-in", short: t("看大图"),
       lab: t("看大图 / 播放"), effect: t("看的是原文件；打开后可以左右翻（← →），滚轮放大缩小"),
       act: () => openViewerAt(path),
-    }];
+    });
     // ⚠️ 这份清单**条数固定、顺序固定**，跟文件类型无关。
     //    用不上的那几条是「禁用 + 写明原因」，不是抽掉。
     //    抽掉的代价：jpg 上「删除」会坐到 png 上「提示词」的位置 ——
@@ -4303,6 +4571,7 @@ function openPicker({ folder, spec, current, onPick }) {
             return;
           }
           if (clickOpensViewer()) { openViewerAt(it.path); return; }
+          if (!canPick) { openViewerAt(it.path); return; }
           pickNow(it.path);
         };
 
@@ -4364,7 +4633,9 @@ function openPicker({ folder, spec, current, onPick }) {
         //    长按图片是同一个入口（见上面），两条路通向同一个菜单。
         const moreB = mbElButton("mb-more");
         setIco(moreB, "lucide--ellipsis");
-        moreB.title = t("这一张的操作：用这张 / 看大图 / 收藏 / 遮蔽 / 删除…");
+        moreB.title = t(canPick
+          ? "这一张的操作：用这张 / 看大图 / 收藏 / 遮蔽 / 删除…"
+          : "这一张的操作：看大图 / 收藏 / 遮蔽 / 删除…");
         moreB.onclick = (ev) => {
           ev.stopPropagation();                   // 别落到「点图 = 看大图」上
           openCellMenu(it, c);
@@ -4605,7 +4876,7 @@ function openPicker({ folder, spec, current, onPick }) {
       applyList(cached, firstLoad);
       firstLoad = false;
       // 后台核对一遍：目录真变了才重画，没变就当无事发生
-      listDir(realRoot(), cwd, rec.checked, sortSel.value, false).then((fresh) => {
+      listDir(realRoot(), cwd, rec.checked, sortSel.value, false, panelAbort?.signal).then((fresh) => {
         if (!currentLoad()) return;
         listRemember(lk, fresh);
         if (!listSame(cached, fresh)) {
@@ -4617,18 +4888,27 @@ function openPicker({ folder, spec, current, onPick }) {
           syncToTop();
         }
       }).catch((e) => {
-        if (!currentLoad() || !cwd || !isMissingDirError(e)) return;
-        // 缓存只是为了先出画面，不能掩盖目录已被外部删除；直接回真实根并绕开旧缓存。
-        const gone = cwd;
-        cwd = "";
-        memo.cwd = "";
-        memo.scroll = 0;
-        LIST_MEM.delete(lk);
-        savePlace(memoKey, browseRoot, "", browseRoot);
-        flash(t("上次的「{path}」已经不在了，已回到 {root}。被删或改名就会这样，点范围或面包屑另选。", {
-          path: gone, root: sel.value,
-        }));
-        void load({ refresh: true });
+        if (!currentLoad()) return;
+        if (e?.name === "AbortError") return;
+        if (cwd && isMissingDirError(e)) {
+          // 缓存只是为了先出画面，不能掩盖目录已被外部删除；直接回真实根并绕开旧缓存。
+          const gone = cwd;
+          cwd = "";
+          memo.cwd = "";
+          memo.scroll = 0;
+          LIST_MEM.delete(lk);
+          savePlace(memoKey, browseRoot, "", browseRoot);
+          flash(t("上次的「{path}」已经不在了，已回到 {root}。被删或改名就会这样，点范围或面包屑另选。", {
+            path: gone, root: sel.value,
+          }));
+          void load({ refresh: true });
+          return;
+        }
+        const msg = isServiceDownError(e)
+          ? t("ComfyUI 服务不可用。列表和缩略图都要后端还在。")
+          : t("🔴 读不出来：{msg}", { msg: t(e.message) });
+        stat.textContent = msg;
+        if (isServiceDownError(e)) flash(msg);
       });
       return;
     }
@@ -4647,7 +4927,7 @@ function openPicker({ folder, spec, current, onPick }) {
       } else {
         let got;
         try {
-          got = await listDir(realRoot(), cwd, rec.checked, sortSel.value, refresh);
+          got = await listDir(realRoot(), cwd, rec.checked, sortSel.value, refresh, panelAbort?.signal);
         } catch (e) {
           if (!currentLoad()) return;
           if (!cwd || !isMissingDirError(e)) throw e;
@@ -4658,7 +4938,7 @@ function openPicker({ folder, spec, current, onPick }) {
           savePlace(memoKey, browseRoot, "", browseRoot);
           drawCrumb();
           lk = listKey(realRoot(), "", rec.checked, sortSel.value);
-          got = await listDir(realRoot(), "", rec.checked, sortSel.value, refresh);
+          got = await listDir(realRoot(), "", rec.checked, sortSel.value, refresh, panelAbort?.signal);
           if (!currentLoad()) return;
           flash(t("上次的「{path}」已经不在了，已回到 {root}。被删或改名就会这样，点范围或面包屑另选。", {
             path: gone, root: sel.value,
@@ -4673,7 +4953,16 @@ function openPicker({ folder, spec, current, onPick }) {
       firstLoad = false;
       if (refresh) flash(t("已重新扫描 · {n} 个文件", { n: result.files.length }));
     } catch (e) {
-      if (currentLoad()) stat.textContent = t("🔴 读不出来：{msg}", { msg: t(e.message) });
+      if (!currentLoad()) return;
+      if (e?.name === "AbortError") return;
+      const msg = isServiceDownError(e)
+        ? t("ComfyUI 服务不可用。列表和缩略图都要后端还在。")
+        : t("🔴 读不出来：{msg}", { msg: t(e.message) });
+      stat.textContent = msg;
+      // 骨架格不是失败态。服务断了还留着会让人以为目录正在加载。
+      releasePool();
+      canvas.style.height = "auto";
+      canvas.innerHTML = `<div class="mb-empty">${escHtml(msg)}</div>`;
     } finally {
       if (refresh && currentLoad()) setRefreshBusy(false);
     }
@@ -5806,7 +6095,7 @@ function openPicker({ folder, spec, current, onPick }) {
             `<div class="mb-set-card">` +
               `<h4>${mbIco("lucide--layout-grid")} ${escHtml(t("偏好"))}</h4>` +
               `<div class="purge">` +
-                `<div class="line"><button type="button" data-purge="prefs">${escHtml(t("恢复默认界面"))}</button><i>${escHtml(t("语言、格子、递归、类型、排序、点击行为、清晰度、遮蔽档位、滑条和检测并发。收藏和锁不动。"))}</i></div>` +
+                `<div class="line"><button type="button" data-purge="prefs">${escHtml(t("恢复默认界面"))}</button><i>${escHtml(t("语言、格子、递归、类型、排序、点击行为、清晰度、遮蔽档位、滑条、检测并发和浮钮位置。收藏和锁不动。"))}</i></div>` +
               `</div>` +
             `</div>` +
             `<div class="mb-set-card danger">` +
@@ -6115,6 +6404,9 @@ function openPicker({ folder, spec, current, onPick }) {
         // 第二个参数禁止重建刚清掉的偏好键，但仍复用同一套面板/html/计时器同步。
         setTouch(auto, false);
       }
+      if (loadJSON("mediabrowser.fab.pos", null) == null) {
+        resetFabToDefault();
+      }
     };
     // 缓存用量。清完当场刷新这里的数字 —— 那是用户唯一能验证「真清掉了」的地方，
     // 所以清理**不关弹窗**：关掉等于把人赶离唯一能确认结果的界面，只剩一句 toast。
@@ -6159,7 +6451,7 @@ function openPicker({ folder, spec, current, onPick }) {
     lay.querySelector("[data-purge=prefs]").onclick = async () => {
       if (!await confirmAsk(
         t("恢复默认界面？"),
-        t("语言、格子、排序、点一下图片的行为、缩略图清晰度、遮蔽档位、全部滑条和检测并发都会回到默认，不能撤销。收藏、锁、标记和缓存都不动。"),
+        t("语言、格子、排序、点一下图片的行为、缩略图清晰度、遮蔽档位、全部滑条、检测并发和浮钮位置都会回到默认，不能撤销。收藏、锁、标记和缓存都不动。"),
       )) return;
       dropKeys(PREF_KEYS);
       applyPrefsLive();
@@ -6308,8 +6600,8 @@ function openPicker({ folder, spec, current, onPick }) {
     box.style.setProperty("--mb-btn-w", bw + "px");
     box.style.setProperty("--mb-btn-h", bh + "px");
     box.style.setProperty("--mb-btn-fs", Math.min(20, Math.max(11, w * 0.082)).toFixed(1) + "px");
-    // 这 8 个动作能不能在这一格里排成**一行**。排得下就直接摆在图上（一步到位、
-    // 信息密度高）；排不下就只留一个「⋯」，点开是同样这 8 个、同样的顺序。
+    // 当前格子实际动作数能不能在这一格里排成**一行**（选片窗含「用这张」，浏览窗少一枚）。
+    // 排得下就直接摆在图上；排不下就只留一个「⋯」，点开是同样这批、同样的顺序。
     // 只认「一行」这一个门槛，不搞两行的中间态 —— 两行既盖住半张图，
     // 又比菜单难点，两头不讨好。
     const need = CELL_ACTION_IDS.length * bw + (CELL_ACTION_IDS.length - 1) * 3 + 6;
@@ -6399,14 +6691,14 @@ function openPicker({ folder, spec, current, onPick }) {
   rebuildScope();
 
   // ── 最大化 / 窗口化 ──
-  //    只做这两个，不做最小化：这是个模态选择器，「最小化」等于关掉它，
-  //    而关闭已经有 ✕ 和 Esc 两条路，再加一个只会让人猜「这俩什么区别」。
+  //    只做这两个，不做最小化：关掉已经有 ✕ 和 Esc。
   const maxBtn = mask.querySelector('[data-act="max"]');
   // 窗口化时的默认尺寸。还原时如果"原来的尺寸"本身就接近满屏，
   // 还原了也看不出变化 —— 那就退到这个默认值，让「窗口化」名副其实。
   const WIN_W = () => Math.min(1180, Math.round(window.innerWidth * 0.92));
   const WIN_H = () => Math.min(820, Math.round(window.innerHeight * 0.88));
   let restoreSize = null;
+  let restorePos = null;
   let maximized = false;
   const syncMax = () => {
     setIco(maxBtn, maximized ? "lucide--minimize-2" : "lucide--maximize-2");
@@ -6415,16 +6707,24 @@ function openPicker({ folder, spec, current, onPick }) {
   };
   maxBtn.onclick = () => {
     if (maximized) {
-      // 原尺寸本来就 ≥95% 满屏时，还原到它等于没还原 —— 退到默认窗口尺寸
       const nearFull = !restoreSize ||
         restoreSize.w >= window.innerWidth * 0.93 ||
         restoreSize.h >= window.innerHeight * 0.91;
       box.style.width = (nearFull ? WIN_W() : restoreSize.w) + "px";
       box.style.height = (nearFull ? WIN_H() : restoreSize.h) + "px";
+      if (restorePos) {
+        mask.style.left = restorePos.x + "px";
+        mask.style.top = restorePos.y + "px";
+      }
       maximized = false;
       restoreSize = null;
+      restorePos = null;
     } else {
       restoreSize = { w: box.offsetWidth, h: box.offsetHeight };
+      const r = mask.getBoundingClientRect();
+      restorePos = { x: r.left, y: r.top };
+      mask.style.left = "8px";
+      mask.style.top = "8px";
       box.style.width = "98vw";
       box.style.height = "96vh";
       maximized = true;
@@ -6516,6 +6816,7 @@ function openPicker({ folder, spec, current, onPick }) {
     const h = document.createElement("div");
     h.className = "mb-rz " + dir;
     h.addEventListener("pointerdown", (ev) => {
+      if (maximized) return;
       ev.preventDefault();
       ev.stopPropagation();
       const r = box.getBoundingClientRect();
@@ -6526,19 +6827,18 @@ function openPicker({ folder, spec, current, onPick }) {
 
       const move = (e) => {
         const dx = e.clientX - x0, dy = e.clientY - y0;
-        // 弹窗是 flex 居中的，没有 left/top 可改 —— 从哪边拉，尺寸就往哪边算。
-        // 往左拉左边等于变宽，所以 w 侧取 -dx；上边同理。
-        let w = w0, ht = h0;
-        if (dir.includes("e")) w = w0 + dx;
-        if (dir.includes("w")) w = w0 - dx;
-        if (dir.includes("s")) ht = h0 + dy;
-        if (dir.includes("n")) ht = h0 - dy;
-        // 居中布局下从一边拉，两边同时长 —— 视觉上是往两侧各长一半，
-        // 所以位移要乘 2 才跟得上手，否则拖起来"跟不上鼠标"
-        if (dir === "w" || dir === "e") w = w0 + (dir === "e" ? dx : -dx) * 2;
-        if (dir === "n" || dir === "s") ht = h0 + (dir === "s" ? dy : -dy) * 2;
-        box.style.width = Math.min(window.innerWidth * 0.98, Math.max(MIN_W, w)) + "px";
-        box.style.height = Math.min(window.innerHeight * 0.96, Math.max(MIN_H, ht)) + "px";
+        const next = windowResizeDelta(dir, dx, dy, { x: r.left, y: r.top, w: w0, h: h0 });
+        let w = next.w, ht = next.h;
+        w = Math.min(window.innerWidth * 0.98, Math.max(MIN_W, w));
+        ht = Math.min(window.innerHeight * 0.96, Math.max(MIN_H, ht));
+        const clamped = clampWindowResize(
+          dir, next, { x: r.left, y: r.top, w: w0, h: h0 },
+          MIN_W, MIN_H, window.innerWidth, window.innerHeight,
+        );
+        box.style.width = w + "px";
+        box.style.height = ht + "px";
+        mask.style.left = clamped.x + "px";
+        mask.style.top = clamped.y + "px";
       };
       const up = () => {
         box.classList.remove("rzing");
@@ -6553,10 +6853,6 @@ function openPicker({ folder, spec, current, onPick }) {
   }
 
   // ── 弹窗大小：拖动后记下来，下次打开沿用 ──
-  try {
-    const saved = loadJSON("mediabrowser.boxsize", null);
-    if (saved?.w > 400 && saved?.h > 300) { box.style.width = saved.w + "px"; box.style.height = saved.h + "px"; }
-  } catch {}
   if (window.ResizeObserver) {
     let rt = null;
     const ro = new ResizeObserver(() => {
@@ -6644,6 +6940,102 @@ function fixVhsPreview(node, name, root) {
   }
 }
 
+function resetFabToDefault() {
+  const fab = document.querySelector(".mb-fab");
+  if (!fab) return;
+  const pos = defaultFabPos(window.innerWidth, window.innerHeight, 48, 8);
+  fab.style.left = pos.x + "px";
+  fab.style.top = pos.y + "px";
+  fab.style.right = "auto";
+  fab.style.bottom = "auto";
+}
+
+function tryOpenBrowseFromFab() {
+  if (document.querySelector(".mb-play") || document.querySelector(".mb-confirm")) {
+    notify(t("请先关掉预览或确认框"));
+    return;
+  }
+  if (!pickerRegistry.canOpen()) {
+    notify(t("最多同时打开 {n} 个窗口", { n: PICKER_MAX }));
+    focusPicker(pickerRegistry.front());
+    return;
+  }
+  const stored = memoFor("browse:any", "output");
+  openPicker({
+    folder: PLACE_REAL_ROOTS.has(stored.root) ? stored.root : "output",
+    spec: { kind: "any" },
+    current: "",
+    onPick: null,
+  });
+}
+
+function mountFab() {
+  if (document.querySelector(".mb-fab")) return;
+  addStyle();
+  const fab = mbElButton("mb-fab");
+  fab.textContent = "MB";
+  fab.tabIndex = 0;
+  const titleOf = () => t("打开媒体浏览器（再点一次会新开一扇）");
+  fab.title = titleOf();
+  fab.setAttribute("aria-label", fab.title);
+  const applyPos = (pos) => {
+    fab.style.left = pos.x + "px";
+    fab.style.top = pos.y + "px";
+    fab.style.right = "auto";
+    fab.style.bottom = "auto";
+  };
+  const saved = loadJSON("mediabrowser.fab.pos", null);
+  const vw = () => window.innerWidth, vh = () => window.innerHeight;
+  applyPos(saved && Number.isFinite(saved.x)
+    ? clampFabPos(saved.x, saved.y, vw(), vh(), 48, 8)
+    : defaultFabPos(vw(), vh(), 48, 8));
+  let drag = null;
+  fab.addEventListener("pointerdown", (ev) => {
+    const r = fab.getBoundingClientRect();
+    drag = { x: ev.clientX, y: ev.clientY, left: r.left, top: r.top, moved: false };
+    fab.classList.add("dragging");
+    try { fab.setPointerCapture(ev.pointerId); } catch { /* 旧环境没有 */ }
+    ev.preventDefault();
+  });
+  fab.addEventListener("pointermove", (ev) => {
+    if (!drag) return;
+    const dx = ev.clientX - drag.x, dy = ev.clientY - drag.y;
+    if (!fabIsClick(dx, dy, 6)) drag.moved = true;
+    if (!drag.moved) return;
+    applyPos(clampFabPos(drag.left + dx, drag.top + dy, vw(), vh(), 48, 8));
+  });
+  const endDrag = (ev) => {
+    if (!drag) return;
+    const dx = ev.clientX - drag.x, dy = ev.clientY - drag.y;
+    const wasClick = !drag.moved && fabIsClick(dx, dy, 6);
+    fab.classList.remove("dragging");
+    const r = fab.getBoundingClientRect();
+    const pos = clampFabPos(r.left, r.top, vw(), vh(), 48, 8);
+    applyPos(pos);
+    save("mediabrowser.fab.pos", pos);
+    drag = null;
+    if (!wasClick) return;
+    fab.title = titleOf();
+    fab.setAttribute("aria-label", fab.title);
+    tryOpenBrowseFromFab();
+  };
+  fab.addEventListener("pointerup", endDrag);
+  fab.addEventListener("pointercancel", endDrag);
+  fab.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      fab.title = titleOf();
+      fab.setAttribute("aria-label", fab.title);
+      tryOpenBrowseFromFab();
+    }
+  });
+  window.addEventListener("resize", () => {
+    const r = fab.getBoundingClientRect();
+    applyPos(clampFabPos(r.left, r.top, vw(), vh(), 48, 8));
+  });
+  document.body.appendChild(fab);
+}
+
 function attachButton(node) {
   if (!node._mbCfgHook) {
     node._mbCfgHook = true;
@@ -6674,10 +7066,18 @@ function attachButton(node) {
             "\n" + t("先用节点自带的下拉选。"));
       return;
     }
+    const existing = pickerRegistry.findByNode(node);
+    if (existing) { focusPicker(existing); return; }
+    if (!pickerRegistry.canOpen()) {
+      notify(t("最多同时打开 {n} 个窗口", { n: PICKER_MAX }));
+      focusPicker(pickerRegistry.front());
+      return;
+    }
     openPicker({
       folder: spec.root,
       spec,
       current: stripAnn(w.value),
+      node,
       onPick: (name, root) => {
         w.value = annotate(name, root);
         try { w.callback?.(w.value, app.canvas, node); }
@@ -6759,6 +7159,7 @@ app.registerExtension({
     };
     scan();
     queueMicrotask(scan);
+    mountFab();
   },
   // 兜底：万一哪个节点的 onAdded 被别的插件覆盖掉没链上
   nodeCreated(node) { attachButton(node); },

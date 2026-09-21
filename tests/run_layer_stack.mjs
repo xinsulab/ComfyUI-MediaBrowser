@@ -166,4 +166,66 @@ const mkHist = () => {
   if (st.depth() !== 0) fail("即便不能退历史，JS 层栈也该弹掉，否则关不掉浮层");
 }
 
+// ⑪ 点后面那扇浏览窗提到最前时，历史栈也得跟着换序。
+//    否则 Esc 关的是 z-index 最前的窗，后退键关的仍是后进的那扇，两套入口对不上。
+{
+  const h = mkHist();
+  const st = ctx.makeLayerStack(h);
+  if (typeof st.raise !== "function") fail("层栈必须有 raise：点后面的浏览窗时后退键才能关掉它");
+  const hit = [];
+  const a = () => { hit.push("A"); st.pop(); };
+  const b = () => { hit.push("B"); st.pop(); };
+  a._mbPicker = true;
+  b._mbPicker = true;
+  st.push(a);
+  st.push(b);
+  st.raise(a);
+  st.onPop();
+  if (hit.join(",") !== "A") fail(`无大图时 raise 应让后退关掉被点到前面的那扇，实际: ${hit.join(",")}`);
+  if (st.depth() !== 1) fail("另一扇浏览窗应当还在");
+}
+
+// ⑫ 大图压在浏览窗上：raise 一扇浏览窗只能在浏览窗之间换序，不能把它抽到大图上面。
+//    否则后退键会先关掉浏览窗，大图变成无主浮层。
+{
+  const h = mkHist();
+  const st = ctx.makeLayerStack(h);
+  const hit = [];
+  const a = () => { hit.push("A"); st.pop(); };
+  const b = () => { hit.push("B"); st.pop(); };
+  const viewer = () => { hit.push("view"); st.pop(); };
+  a._mbPicker = true;
+  b._mbPicker = true;
+  st.push(a);
+  st.push(b);
+  st.push(viewer);
+  st.raise(a);
+  st.onPop();
+  if (hit.join(",") !== "view") fail(`大图开着时 raise 浏览窗，后退应先关大图，实际: ${hit.join(",")}`);
+  if (st.depth() !== 2) fail("关大图后两扇浏览窗都应还在");
+}
+
+// ⑬ 键盘点后面那扇的 ×：必须按引用摘自己。pop 栈顶会把前面那扇的历史弹掉，画面和后退键对不上。
+{
+  const h = mkHist();
+  const st = ctx.makeLayerStack(h);
+  if (typeof st.drop !== "function") fail("层栈必须有 drop");
+  const hit = [];
+  const a = () => { hit.push("A"); st.drop(a); };
+  const b = () => { hit.push("B"); st.drop(b); };
+  a._mbPicker = true;
+  b._mbPicker = true;
+  st.push(a);
+  st.push(b);
+  a();
+  if (hit.join(",") !== "A") fail(`关后面那扇应只关它自己，实际: ${hit.join(",")}`);
+  if (st.depth() !== 1) fail("前面那扇应当还在");
+  const ate = st.onPop();
+  if (ate !== true) fail("drop 触发的 hist.back 必须被 selfBack 消化");
+  if (hit.length !== 1) fail("消化那发 popstate 不该再关剩下的窗");
+  st.onPop();
+  if (hit.join(",") !== "A,B") fail(`再按后退才关剩下那扇，实际: ${hit.join(",")}`);
+}
+
 console.log("layer stack: all passed");
+
