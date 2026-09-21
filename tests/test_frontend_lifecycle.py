@@ -16,6 +16,7 @@ import pytest
     "run_selection_lifecycle.mjs",
     "run_filter_lifecycle.mjs",
     "run_viewer_lifecycle.mjs",
+    "run_picker_session.mjs",
 ])
 def test_frontend_lifecycle(script):
     root = Path(__file__).resolve().parents[1]

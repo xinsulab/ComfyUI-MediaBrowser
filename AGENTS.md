@@ -4,7 +4,6 @@
 
 - 面向安装和使用者的内容写入 `README.md`。
 - 架构、接口、测试和维护说明写入 `docs/DEVELOPMENT.md`。
-- 任务设计与实施计划写入 `docs/superpowers/`，不要混入 README。
 
 ## 代码约束
 

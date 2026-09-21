@@ -54,7 +54,9 @@ const make = (cached = false) => {
     listRemember: (key,j) => remembered.push([key,j.id]), listSame: () => false,
     showSkeleton(){}, drawCrumb: () => crumbs.push(ctx.cwd),
     scroll:{scrollTop:300}, paint(){}, syncToTop(){},
-    isMissingDirError: e => e.missing, memo: {}, memoKey:'test', savePlace(){}, flash(){},
+    canvas: { style: {}, innerHTML: '' }, releasePool(){}, escHtml: s => String(s),
+    panelAbort: { signal: undefined },
+    isMissingDirError: e => e.missing, isServiceDownError: () => false, memo: {}, memoKey:'test', savePlace(){}, flash(){},
     selected: new Set(), syncSelection: () => selectionSync.push([...ctx.selected]),
     dims: {}, favSet: root => { favRoots.push(root); return new Set(['fav.png']); }, readRecent: () => ({}),
   };
@@ -115,5 +117,26 @@ for (const cached of [false,true]) {
   h.requests[1].resolve({id:'root-after-cache'});
   await Promise.resolve(); await Promise.resolve();
   assert.equal(h.shown.at(-1), 'root-after-cache', '缓存失效回根后必须显示根目录结果');
+}
+{
+  const h = make();
+  h.ctx.isServiceDownError = () => true;
+  const p = h.run();
+  h.requests[0].reject(new Error('Failed to fetch'));
+  await p;
+  assert.match(String(h.ctx.stat.textContent), /ComfyUI/, '服务断开必须写进状态栏，不能只停在「载入中」');
+  assert.match(h.ctx.canvas.innerHTML, /mb-empty/, '没有缓存时服务断开必须清掉骨架，换成失败说明');
+}
+{
+  const flashes = [];
+  const h = make(true);
+  h.ctx.isServiceDownError = () => true;
+  h.ctx.flash = (m) => flashes.push(m);
+  await h.run();
+  h.requests[0].reject(new Error('Failed to fetch'));
+  await Promise.resolve(); await Promise.resolve();
+  assert.match(String(h.ctx.stat.textContent), /ComfyUI/, '有缓存时后台核对失败也必须告诉用户服务断了');
+  assert.ok(flashes.some((m) => /ComfyUI/.test(String(m))), '有缓存时不能把失败吞掉假装目录没变');
+  assert.equal(h.shown.at(-1), 'cached', '有缓存时服务断开应留下已画出的列表，不要改成空骨架');
 }
 console.log('list lifecycle: passed');
