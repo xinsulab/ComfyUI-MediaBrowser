@@ -131,10 +131,11 @@ window.mbSmoke = async function mbSmoke() {
     const canCensorHere = isMedia(cell.dataset.path);
 
     // ── 动作顺序：三个界面都必须是同一串的子序列 ──
-    const ORDER = ["pick", "view", "peek", "lock", "skip", "redo", "fav", "shot", "meta", "wf", "trash"];
+    const ORDER = ["pick", "view", "peek", "lock", "skip", "redo", "fav", "shot", "copyimage", "plain", "brush", "meta", "wf", "trash"];
     const ICO2ID = {
       "check": "pick", "zoom-in": "view", "eye": "peek", "lock": "lock", "lock-open": "lock",
-      "ban": "skip", "star": "fav", "star-fill": "fav", "camera": "shot", "info": "meta",
+      "ban": "skip", "star": "fav", "star-fill": "fav", "camera": "shot", "image": "plain",
+      "image-workflow": "copyimage", "paintbrush": "brush", "info": "meta",
       "workflow": "wf", "trash-2": "trash",
     };
     const idOf = (b) => {
@@ -222,7 +223,7 @@ window.mbSmoke = async function mbSmoke() {
       const barIds2 = [...play.querySelectorAll(".bar button")].map(idOf).filter(Boolean);
       ok("大图底栏也按同一串排", sorted(barIds2.map((x) => ORDER.indexOf(x))),
          "大图是 " + barIds2.join(" · "));
-      for (const must of ["pick", "lock", "fav", "shot", "meta", "wf", "trash"]) {
+      for (const must of ["pick", "lock", "fav", "shot", "copyimage", "plain", "brush", "meta", "wf", "trash"]) {
         ok("大图底栏有「" + must + "」", barIds2.indexOf(must) >= 0, "格子里有、点进去反而没有");
       }
       // ① 先在**确定是图片**的这一张上测「再点一下关掉」。

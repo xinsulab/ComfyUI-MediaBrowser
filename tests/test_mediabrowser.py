@@ -959,7 +959,7 @@ def test_breast_cover_is_separate_from_global():
         raise AssertionError("visibleBoxes 必须按标签取缩放比，不能一律用 censorCover()")
     # 新增的偏好键要登记进 PREF_KEYS，否则「清空设置」清不掉
     j = src.find("const PREF_KEYS")
-    seg = src[j:j + 400]
+    seg = src[j:src.index("];", j)]
     for k in ("CENSOR_LABELS_KEY", "CENSOR_BREAST_COVER_KEY", "THUMB_PER_CELL_KEY"):
         if k not in seg:
             raise AssertionError(f"{k} 没登记进 PREF_KEYS，清空设置会留残留")
@@ -1810,6 +1810,19 @@ def test_list_refresh_bypasses_ttl_cache():
         shutil.rmtree(idxd, ignore_errors=True)
 
 
+def test_legacy_paint_is_disabled_without_touching_files(tmp_path):
+    """旧页面请求必须被拒绝，不能再走原图覆盖路径。"""
+    import asyncio
+    from PIL import Image
+    src = tmp_path / "original.png"
+    Image.new("RGB", (24, 24), "red").save(src)
+    before = src.read_bytes(), src.stat().st_mtime_ns
+    for body in ({}, {"filename": "../original.png"}, {"filename": str(src), "ops": []}):
+        response = asyncio.run(mb.mediabrowser_paint(_post(body)))
+        assert response.status == 410
+    assert (src.read_bytes(), src.stat().st_mtime_ns) == before
+
+
 def test_trash_ok_and_clears_list_cache():
     """路由必须先 _resolve，成功后清掉该根的列表缓存。回收站本身用替身，避免测试往回收站扔垃圾。"""
     import asyncio
@@ -2062,6 +2075,68 @@ def test_unlock_keeps_local_peek():
         raise AssertionError("找不到 paintLockOnCell")
     if "needsPeek(path)" not in src[i:i + 480]:
         raise AssertionError("解锁后局部有框应重新挂揭开钮")
+
+
+def test_viewer_trash_deletes_without_asking():
+    """大图底栏和 Delete 都直接进回收站；格子菜单和批量删除仍要先问。
+
+    人已经在看这一张，再弹一次确认只会打断连删。确认框仍留给
+    格子菜单（误点成本更高）和批量删除（一次拿走多张）。
+    """
+    src = _mediabrowser_js()
+    i = src.find("const trashViewing = ")
+    if i < 0:
+        raise AssertionError("找不到大图删除动作")
+    body = src[i:i + 1100]
+    if "confirmTrash" in body:
+        raise AssertionError("大图删除不应再弹确认框")
+    if "hooks.trashOne" not in body:
+        raise AssertionError("大图删除必须仍走回收站，不能改成直接删文件")
+    if "trashing" not in body:
+        raise AssertionError("请求回来前必须挡住同一张的连点")
+    if 'lay.querySelector(".trash").onclick' not in body:
+        raise AssertionError("底栏删除必须走同一个 trashViewing")
+    menu = src.find('id: "trash"')
+    if menu < 0 or "confirmTrash" not in src[menu:menu + 500]:
+        raise AssertionError("格子菜单的删除仍要先问一次")
+    batch = src.find('data-batch=trash')
+    if batch < 0 or "confirmTrash" not in src[batch:batch + 700]:
+        raise AssertionError("批量删除仍要先问一次")
+    key = src.find("const onKey = (e) => {", src.find("function openViewer"))
+    if key < 0:
+        raise AssertionError("找不到大图键盘处理")
+    keys = src[key:src.index("  const releasePaintPan=", key)]
+    if 'e.key === "Delete"' not in keys or "trashViewing" not in keys:
+        raise AssertionError("大图里按 Delete 必须直接删当前这张")
+    if "confirmTrash" in keys:
+        raise AssertionError("Delete 不应再弹确认框")
+    if "e.repeat" not in keys:
+        raise AssertionError("按住 Delete 的连发不能把后面的图也删掉")
+    if "viewKeyInField" not in keys:
+        raise AssertionError("正在输入时 Delete 不能拿去删图")
+
+
+def test_viewer_paint_has_two_modes():
+    """画笔直接开始编辑，框选保留在展开工具条内，复制使用统一入口。"""
+    src = _mediabrowser_js()
+    assert 'class="act rect"' not in src
+    assert 'data-tool="rect"' in src
+    assert 'class="copy-draft"' not in src
+    assert 'class="act brush"' in src
+    assert 'data-tool="select"' in src
+    assert "lucide--paintbrush" in src
+    i = src.find("const CELL_ACTION_IDS")
+    ids = src[i:src.find("]", i) + 1]
+    assert '"rect"' not in ids and '"brush"' not in ids, "格子太小，打码不能进宫格动作条"
+    j = src.find("const startPaint")
+    body = src[j:j + 900]
+    assert 'startPaint(b.dataset.tool)' in src
+    assert 'startPaint("brush")' in src
+    assert "savePaint" in body or "hooks.savePaint" in src
+    commit = src[src.find("const commitPaint"):src.find("const leavePaint")]
+    assert "hooks.savePaint" in commit and "paintState()" in commit
+    assert "confirmAsk" not in commit, "保存图层不再要求覆盖源图确认"
+
 
 
 def test_viewer_redo_uses_scan_ico():
@@ -3197,7 +3272,7 @@ def test_actions_come_from_one_ordered_source():
     # ② 大图底栏：DOM 顺序必须是 ACTION_ORDER 的子序列
     j = src.find('<button type="button" class="pick">')
     bar = src[j:src.index('<button type="button" class="cls">', j)]
-    seen = re.findall(r'class="(?:act )?([a-z-]+)"', bar)
+    seen = re.findall(r'<button type="button" class="(?:act )?([a-z-]+)"', bar)
     seen = [("shot" if x == "shot-one" else x) for x in seen]
     # 「打开遮蔽面板」是**导航**（点进去还有一层），不是对这一项做的动作，
     # 所以不排进 ACTION_ORDER —— 格子那边它也是单独的整行入口，摆在宫格最后。
@@ -3208,7 +3283,7 @@ def test_actions_come_from_one_ordered_source():
     assert len(pos) == len(seen), f"大图底栏有不在 ACTION_ORDER 里的：{seen}"
     # 子集可以不同，但**对每一项都成立**的那几个动作，大图不能缺 ——
     # 缺一个就等于「在格子里能做、点进大图反而做不了」。
-    for must in ("pick", "lock", "fav", "shot", "meta", "wf", "trash"):
+    for must in ("pick", "lock", "fav", "shot", "plain", "brush", "meta", "wf", "trash"):
         assert must in seen, f"大图底栏缺了 {must}，格子里有、点进去反而没有"
 
     # ③ 同一个动作在两处不能有两个名字。
@@ -3336,7 +3411,7 @@ def test_bar_and_menu_share_one_action_list():
     k = src.find("const cellActionsFor")
     seg = src[k:src.find("const showMeta", k)]
     ids = re.findall(r'id: "(\w+)"', seg)
-    for need in ("pick", "view", "fav", "shot", "trash"):
+    for need in ("pick", "view", "fav", "shot", "plain", "trash"):
         if need not in ids:
             raise AssertionError(f"动作清单里缺 {need}，实际有 {ids}")
     if seg.count("effect:") < len(ids):
@@ -3620,7 +3695,7 @@ def test_viewer_wheel_zooms():
     if 'stage.addEventListener("wheel"' not in src:
         raise AssertionError("查看器缺滚轮缩放")
     i = src.find('stage.addEventListener("wheel"')
-    body = src[i:i + 700]
+    body = src[i:src.index("// 触屏翻页", i)]
     if "preventDefault" not in body:
         raise AssertionError("滚轮必须 preventDefault，否则会缩放整页 ComfyUI")
     if "viewZoomAfterWheel" not in body or "viewZoomTranslate" not in body:
@@ -3741,33 +3816,15 @@ def test_cursor_tells_you_what_the_click_will_do():
         raise AssertionError("改完设置没同步鼠标样式")
 
 
-def test_local_mode_blurs_first_then_refines():
-    """局部模式下，检测框还没回来的那一张必须**先糊着**，不能先把原图亮出来。
-
-    先亮原图看着更快，但一屏 24 张检测要十几秒（实测服务端约 0.6s/张，
-    而且 ORT 的 run 是串行的）—— 那十几秒等于遮蔽根本没开，
-    而遮蔽存在的理由正是「别把原图亮出来」。
-    代价接近零：糊是纯 CSS，瞬时；框到了立刻摘掉换成精确遮蔽。
-    """
+def test_local_mode_waiting_overlay_uses_same_snapshot():
+    """等待态仍可整图遮蔽，正式图层和原始检测缓存必须分开判断。"""
     src = _mediabrowser_js()
-    if ".mb-cell.censor-wait img{filter:blur" not in src:
-        raise AssertionError("缺「等检测时先糊着」的样式")
-    if ".mb-cell.censor-wait.peek img{filter:none" not in src:
-        raise AssertionError("糊着也得能点眼睛看一眼，否则没有出路")
-    i = src.find("const applyLocalCaches")
-    body = src[i:i + 1400]
-    if 'el.classList.add("censor-wait")' not in body:
-        raise AssertionError("没有框的那一张要挂上等待态")
-    if 'el.classList.remove("censor-wait")' not in body:
-        raise AssertionError("框到了要摘掉等待态，否则一直糊着")
-    # 跳过河蟹 / 整张糊 的不该被等待态盖住
-    j = body.find("isSkipDetect(path)")
-    if 'remove("censor-wait")' not in body[j:j + 260]:
-        raise AssertionError("「跳过河蟹」标过的不该再挂等待态 —— 你已经说过那张不用管")
-    # 检测完但没有要遮的部位，也要摘掉，否则干净的图一直糊着
-    # 检测完但没有要遮的部位，也要摘掉，否则干净的图一直糊着
-    if 'rec.reason !== "failed"' not in src:
-        raise AssertionError("检测完确认没有要遮的部位时，也必须摘掉等待态")
+    assert ".mb-cell.censor-wait > img{filter:blur" in src
+    body = src[src.index("const applyLocalCaches"):src.index("const mediaInView")]
+    assert "!cached?.exists" in body
+    assert "!isSkipDetect(path)" in body
+    assert 'el.classList.toggle("censor-wait",waiting)' in body
+    assert "flags.fullBlur ||= waiting" in body
 
 
 def test_no_dangling_constant_references():
@@ -3842,8 +3899,8 @@ def test_per_image_tuning_is_stored_apart_and_clearable():
     # 画的时候要认这两个值
     if "coverFor(b.label, rule)" not in src:
         raise AssertionError("visibleBoxes 没把 rule 传给 coverFor，单张范围不会生效")
-    if 'rule.blur != null) layer.style.setProperty' not in src:
-        raise AssertionError("paintCensorOverlay 没按单张糊度设 CSS 变量")
+    assert 'rule?.blur || censorBlur()' in src, '图层画法必须使用当前图片力度'
+    assert 'detectedOps([op.raw],rule)' in src, '自动框必须保留按新设置重绘的能力'
     # 内存缓存也要跟着清，否则清完还按旧值画
     k = src.find("const forgetClientMarks")
     if "censorTuneCache = null" not in src[k:k + 260]:

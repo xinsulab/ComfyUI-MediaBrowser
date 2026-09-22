@@ -16,3 +16,6 @@ tests/_fixture/
 
 # 本机过程笔记，不属于发行内容。
 docs/local/
+
+# 可编辑遮蔽记录，不随插件发行。
+_overlays/

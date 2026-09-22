@@ -5,6 +5,9 @@ PIL / 扫盘 / 抽帧必须进线程池，不能在 async 处理器里同步跑�
 """
 import asyncio
 import hashlib
+import io
+import json
+import math
 import os
 import re
 import sys
@@ -14,7 +17,8 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor
 
 from aiohttp import web
-from PIL import Image, ImageOps
+from PIL import Image, ImageDraw, ImageOps, ImageFilter
+from PIL.PngImagePlugin import PngInfo
 
 import folder_paths
 from server import PromptServer
@@ -304,7 +308,7 @@ def _trim_thumb_cache() -> None:
         _rm(e.path)
 
 
-_SKIP = {"_thumbcache", "__pycache__", ".git", "node_modules", "_models", "_regions"}
+_SKIP = {"_thumbcache", "__pycache__", ".git", "node_modules", "_models", "_regions", "_overlays"}
 
 
 # 尺寸索引用于瀑布流初始比例；未索引条目在缩略图加载后由前端校正。
@@ -1805,6 +1809,250 @@ async def mediabrowser_regions(request):
     return web.json_response(data)
 
 
+# 限制解码像素数量，避免预览合成占用过量内存。
+_PAINT_MAX_PIXELS = 50_000_000
+_PAINT_STILL = (".png", ".jpg", ".jpeg", ".webp", ".bmp")
+
+
+def _pixelate_box(im: Image.Image, box: tuple[int, int, int, int], block: int) -> None:
+    """把矩形变成马赛克。NEAREST 放大才会是色块，不是糊。"""
+    x0, y0, x1, y1 = box
+    region = im.crop((x0, y0, x1, y1))
+    rw, rh = region.size
+    if rw < 2 or rh < 2:
+        return
+    small = region.resize(
+        (max(1, rw // block), max(1, rh // block)),
+        Image.Resampling.NEAREST,
+    )
+    im.paste(small.resize((rw, rh), Image.Resampling.NEAREST), (x0, y0))
+
+
+def _norm_rect(op: dict, w: int, h: int) -> tuple[int, int, int, int] | None:
+    x0 = int(max(0, min(w, round(op["x"] * w))))
+    y0 = int(max(0, min(h, round(op["y"] * h))))
+    x1 = int(max(0, min(w, round((op["x"] + op["w"]) * w))))
+    y1 = int(max(0, min(h, round((op["y"] + op["h"]) * h))))
+    if x1 - x0 < 2 or y1 - y0 < 2:
+        return None
+    return x0, y0, x1, y1
+
+
+def _pixelate_stroke(im: Image.Image, pts: list, radius_norm: float, block: int, effect: str = "mosaic", strength: float = 14) -> None:
+    """沿折线打圆形笔刷马赛克。先糊包围盒，再用笔迹当蒙版贴回去。"""
+    w, h = im.size
+    radius = max(1, int(round(radius_norm * min(w, h))))
+    pix = [(p[0] * w, p[1] * h) for p in pts]
+    xs = [p[0] for p in pix]
+    ys = [p[1] for p in pix]
+    x0 = int(max(0, math.floor(min(xs) - radius)))
+    y0 = int(max(0, math.floor(min(ys) - radius)))
+    x1 = int(min(w, math.ceil(max(xs) + radius)))
+    y1 = int(min(h, math.ceil(max(ys) + radius)))
+    if x1 - x0 < 2 or y1 - y0 < 2:
+        return
+    mosaic = im.crop((x0, y0, x1, y1))
+    mw, mh = mosaic.size
+    # 共用笔迹蒙版，确保模糊与马赛克切换不改变已画区域。
+    if effect == "blur":
+        mosaic = mosaic.filter(ImageFilter.GaussianBlur(strength))
+    else:
+        small = mosaic.resize(
+            (max(1, mw // block), max(1, mh // block)), Image.Resampling.NEAREST,
+        )
+        mosaic = small.resize((mw, mh), Image.Resampling.NEAREST)
+    mask = Image.new("L", (mw, mh), 0)
+    draw = ImageDraw.Draw(mask)
+    local = [(p[0] - x0, p[1] - y0) for p in pix]
+    if len(local) == 1:
+        px, py = local[0]
+        draw.ellipse((px - radius, py - radius, px + radius, py + radius), fill=255)
+    else:
+        draw.line(local, fill=255, width=radius * 2, joint="curve")
+        for px, py in local:
+            draw.ellipse((px - radius, py - radius, px + radius, py + radius), fill=255)
+    im.paste(mosaic, (x0, y0), mask)
+
+
+def _png_keep_info(im: Image.Image) -> PngInfo:
+    """把原 PNG 的 prompt / workflow 文本块带去新文件。重编码像素，但工作流不能丢。"""
+    info = PngInfo()
+    text = getattr(im, "text", None) or {}
+    for key, val in text.items():
+        if not isinstance(key, str) or not isinstance(val, str) or not key:
+            continue
+        try:
+            val.encode("latin-1")
+            info.add_text(key, val)
+        except (UnicodeEncodeError, OSError, ValueError):
+            try:
+                info.add_itxt(key, val)
+            except (OSError, ValueError):
+                pass
+    return info
+
+
+# 图层单独保存；锁覆盖版本比较和原子写入，避免多个窗口互相覆盖。
+OVERLAY_DIR = os.path.join(os.path.dirname(__file__), "_overlays")
+_OVERLAY_LOCK = threading.RLock()
+
+
+def _overlay_source(src):
+    st = os.stat(src)
+    with Image.open(src) as im:
+        if im.width * im.height > _PAINT_MAX_PIXELS:
+            raise ValueError("图片尺寸超出处理限制")
+        if getattr(im, "n_frames", 1) > 1:
+            raise ValueError("暂不支持编辑动态图")
+        # 浏览器按 EXIF 显示方向，图层坐标也必须使用相同的朝向。
+        width, height = im.size
+        if im.getexif().get(274, 1) in (5, 6, 7, 8):
+            width, height = height, width
+        return {"size": st.st_size, "mtimeNs": str(st.st_mtime_ns), "width": width, "height": height}
+
+
+def _overlay_path(src):
+    key = hashlib.sha256(os.path.normcase(os.path.realpath(src)).encode("utf-8")).hexdigest()
+    return os.path.join(OVERLAY_DIR, key + ".json")
+
+
+def _overlay_ops(raw):
+    if not isinstance(raw, list) or len(raw) > 2000:
+        raise ValueError("遮蔽区域数量超出限制")
+    out, ids, total = [], set(), 0
+    for item in raw:
+        if not isinstance(item, dict):
+            raise ValueError("遮蔽记录无效")
+        ident = item.get("id")
+        if not isinstance(ident, str) or not ident or len(ident) > 100 or ident in ids:
+            raise ValueError("遮蔽标识无效")
+        ids.add(ident)
+        kind = item.get("k")
+        keys = ("x", "y", "w", "h") if kind == "r" else ("r",) if kind == "s" else ()
+        if not keys:
+            raise ValueError("遮蔽类型无效")
+        op = {"id": ident, "k": kind, "auto": item.get("auto") is True,
+              "label": str(item.get("label", ""))[:100]}
+        for key in keys:
+            value = item.get(key)
+            if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or not 0 <= value <= 1:
+                raise ValueError("遮蔽坐标无效")
+            op[key] = value
+        if kind == "r":
+            if op["w"] <= 0 or op["h"] <= 0 or op["x"] + op["w"] > 1.000001 or op["y"] + op["h"] > 1.000001:
+                raise ValueError("遮蔽区域越界")
+        else:
+            pts = item.get("pts")
+            if not isinstance(pts, list) or not pts or not 0.001 <= op["r"] <= 0.2:
+                raise ValueError("笔刷记录无效")
+            total += len(pts)
+            if total > 50000:
+                raise ValueError("笔刷点数量超出限制")
+            for point in pts:
+                if not isinstance(point, list) or len(point) != 2 or any(isinstance(v, bool) or not isinstance(v, (int, float)) or not math.isfinite(v) or not 0 <= v <= 1 for v in point):
+                    raise ValueError("笔刷坐标无效")
+            op["pts"] = pts
+        block = item.get("block", 16)
+        if isinstance(block, bool) or not isinstance(block, (int, float)) or not math.isfinite(block) or not 6 <= block <= 48:
+            raise ValueError("马赛克尺寸无效")
+        op["block"] = int(block)
+        effect = item.get("effect", "mosaic")
+        strength = item.get("strength", 14)
+        if effect not in ("mosaic", "blur") or isinstance(strength, bool) or not isinstance(strength, (int, float)) or not math.isfinite(strength) or not 1 <= strength <= 80:
+            raise ValueError("遮蔽样式无效")
+        op.update(effect=effect, strength=strength)
+        raw = item.get("raw")
+        if isinstance(raw, dict):
+            # 仅保存检测器的标量输入，不允许任意对象进入长期图层记录。
+            allowed = {k: raw[k] for k in ("x", "y", "w", "h", "score") if k in raw}
+            if any(isinstance(v, bool) or not isinstance(v, (int, float)) or not math.isfinite(v) for v in allowed.values()):
+                raise ValueError("检测区域无效")
+            allowed["label"] = str(raw.get("label", ""))[:100]
+            op["raw"] = allowed
+        out.append(op)
+    return out
+
+
+def _overlay_read(src):
+    version = _overlay_source(src)
+    path = _overlay_path(src)
+    with _OVERLAY_LOCK:
+        if not os.path.isfile(path):
+            return {"schemaVersion": 1, "sourceVersion": version, "revision": 0, "ops": [], "suppressed": [], "exists": False}
+        with open(path, encoding="utf-8") as f:
+            record = json.load(f)
+        if record.get("sourceVersion") != version:
+            return {"schemaVersion": 1, "sourceVersion": version, "revision": record["revision"], "ops": [], "suppressed": [], "exists": False, "stale": True}
+        return {**record, "exists": True}
+
+
+def _overlay_save(src, body):
+    revision = body.get("expectedRevision")
+    if isinstance(revision, bool) or not isinstance(revision, int) or revision < 0:
+        raise ValueError("遮蔽版本无效")
+    ops = _overlay_ops(body.get("ops"))
+    suppressed = _overlay_ops(body.get("suppressed", []))
+    with _OVERLAY_LOCK:
+        old = _overlay_read(src)
+        if body.get("sourceVersion") != old["sourceVersion"] or body.get("expectedRevision") != old["revision"]:
+            raise FileExistsError("图片或遮蔽已更新，请重新打开后编辑")
+        record = {"schemaVersion": 1, "sourceVersion": old["sourceVersion"], "revision": old["revision"] + 1,
+                  "ops": ops, "suppressed": suppressed, "updatedAt": time.time(), "exists": True}
+        os.makedirs(OVERLAY_DIR, exist_ok=True)
+        path = _overlay_path(src)
+        tmp = path + "." + uuid.uuid4().hex + ".tmp"
+        try:
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump(record, f, ensure_ascii=False, allow_nan=False)
+            # 写入期间源文件被其他程序替换时，拒绝保存旧坐标。
+            if _overlay_source(src) != old["sourceVersion"]:
+                raise FileExistsError("图片已更新，请重新打开后编辑")
+            os.replace(tmp, path)
+        finally:
+            if os.path.exists(tmp):
+                os.remove(tmp)
+        return record
+
+
+def _render_overlay(src, body):
+    for key in ("showOverlay", "fullBlur", "peeking", "keepWorkflow"):
+        if key in body and not isinstance(body[key], bool):
+            raise ValueError("显示状态无效")
+    ops = _overlay_ops(body.get("ops", []))
+    version = _overlay_source(src)
+    if body.get("sourceVersion") != version:
+        raise FileExistsError("图片已更新，请重新打开后复制")
+    with Image.open(src) as im:
+        im.load()
+        info = _png_keep_info(im) if body.get("keepWorkflow") is True else None
+        work = ImageOps.exif_transpose(im).convert("RGBA")
+        if not body.get("peeking"):
+            if body.get("showOverlay"):
+                for op in ops:
+                    if op["k"] == "r":
+                        box = _norm_rect(op, *work.size)
+                        if box:
+                            if op["effect"] == "blur":
+                                work.paste(work.crop(box).filter(ImageFilter.GaussianBlur(op["strength"])), box)
+                            else:
+                                _pixelate_box(work, box, op["block"])
+                    else:
+                        _pixelate_stroke(work, op["pts"], op["r"], op["block"], op["effect"], op["strength"])
+            if body.get("fullBlur"):
+                work = work.filter(ImageFilter.GaussianBlur(22))
+        # 预览先按原图尺度合成再缩小；复制未传此参数，始终导出源尺寸。
+        preview_max = body.get("previewMax")
+        if preview_max is not None:
+            if isinstance(preview_max, bool) or not isinstance(preview_max, int) or not 64 <= preview_max <= 2048:
+                raise ValueError("预览尺寸无效")
+            work.thumbnail((preview_max, preview_max), Image.Resampling.LANCZOS)
+        result = io.BytesIO()
+        work.save(result, format="PNG", pnginfo=info)
+    if _overlay_source(src) != version:
+        raise FileExistsError("图片已更新，请重新打开后复制")
+    return result.getvalue()
+
+
 def _forget_listed(kind: str, rel: str = "") -> None:
     """删文件后列表缓存和尺寸索引必须立刻失效，否则刷新还看得见幽灵。"""
     dead = [k for k in _LIST_CACHE if k.startswith(f"{kind}|")]
@@ -1930,6 +2178,58 @@ async def mediabrowser_trash(request):
     rel = filename.replace("\\", "/")
     _forget_listed(kind, rel)
     return web.json_response({"ok": True, "filename": rel})
+
+
+@PromptServer.instance.routes.post("/mediabrowser/paint")
+async def mediabrowser_paint(request):
+    # 旧页面不能继续覆盖源图；刷新后使用独立图层接口。
+    return web.json_response({"error": "打码已改为独立图层，请刷新页面"}, status=410)
+
+
+async def _overlay_request(request, action):
+    try:
+        if action == "read":
+            body = dict(request.query)
+        else:
+            if request.content_length and request.content_length > 2 * 1024 * 1024:
+                return web.json_response({"error": "遮蔽记录过大"}, status=413)
+            raw = await request.read()
+            if len(raw) > 2 * 1024 * 1024:
+                return web.json_response({"error": "遮蔽记录过大"}, status=413)
+            body = json.loads(raw)
+        if not isinstance(body, dict) or not body.get("filename"):
+            raise ValueError("请选择图片")
+        src = _resolve(str(body.get("type", "input")), str(body["filename"]))
+        if not src.lower().endswith(_PAINT_STILL):
+            return web.json_response({"error": "此功能仅支持静态图片"}, status=415)
+        fn = {"read": lambda: _overlay_read(src), "save": lambda: _overlay_save(src, body), "render": lambda: _render_overlay(src, body)}[action]
+        result = await asyncio.get_running_loop().run_in_executor(_POOL, fn)
+        if action == "render":
+            return web.Response(body=result, content_type="image/png", headers={"Cache-Control": "no-store"})
+        return web.json_response(result)
+    except FileExistsError as e:
+        return web.json_response({"error": str(e)}, status=409)
+    except FileNotFoundError:
+        return web.json_response({"error": "图片不存在"}, status=404)
+    except (ValueError, TypeError, KeyError, UnicodeDecodeError):
+        return web.json_response({"error": "遮蔽记录或图片无效"}, status=400)
+    except OSError:
+        return web.json_response({"error": "无法读取或保存遮蔽，请重试"}, status=500)
+
+
+@PromptServer.instance.routes.get("/mediabrowser/overlay")
+async def mediabrowser_overlay_get(request):
+    return await _overlay_request(request, "read")
+
+
+@PromptServer.instance.routes.post("/mediabrowser/overlay")
+async def mediabrowser_overlay_post(request):
+    return await _overlay_request(request, "save")
+
+
+@PromptServer.instance.routes.post("/mediabrowser/render")
+async def mediabrowser_render(request):
+    return await _overlay_request(request, "render")
 
 
 def _purge_dir(root: str) -> int:
