@@ -1,0 +1,26 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+const src=fs.readFileSync(process.argv[2],'utf8');
+const helpers=src.match(/\/\* PNG_WORKFLOW_BEGIN \*\/([\s\S]*?)\/\* PNG_WORKFLOW_END \*\//)[1];
+const parse=new Function(helpers+';return pngWorkflowText;')();
+function png(type,data){const bytes=new Uint8Array(8+12+data.length);new DataView(bytes.buffer).setUint32(8,data.length);bytes.set(new TextEncoder().encode(type),12);bytes.set(data,16);return bytes;}
+const text='{"nodes":[],"title":"café"}';
+const latin=Uint8Array.from('workflow\0'+text,c=>c.charCodeAt(0));
+assert.equal(parse(png('tEXt',latin)),text,'Latin-1 workflow text must not be corrupted');
+const chinese='{"nodes":[],"title":"测试"}';
+assert.equal(parse(png('iTXt',new TextEncoder().encode('workflow\0\0\0\0\0'+chinese))),chinese);
+assert.equal(parse(new Uint8Array(9)),'');
+let call=null,resolve;
+const pending=new Promise(r=>resolve=r);
+const code=src.slice(src.indexOf('const writePng = async'),src.indexOf('const drawCover'));
+const write=new Function('navigator','ClipboardItem','pngWorkflowText','t','clipWhy',code+';return writePng;')({clipboard:{write:async items=>{call=items;await Promise.all(Object.values(items[0].data));}}},class{constructor(data){this.data=data;}},parse,s=>s,e=>e.message);
+const result=write(pending,true);
+assert.ok(call,'clipboard.write must run during the initiating click');
+assert.deepEqual(Object.keys(call[0].data).sort(),['image/png','text/plain']);
+const blob=new Blob([png('tEXt',latin)],{type:'image/png'});resolve(blob);await result;
+assert.equal(await (await call[0].data['text/plain']).text(),text);
+assert.equal(await call[0].data['image/png'],blob);
+await write(Promise.resolve(blob),false);
+assert.deepEqual(Object.keys(call[0].data),['image/png'],'plain copy must not carry workflow text');
+await assert.rejects(write(Promise.reject(new Error('render failed')),true),/render failed/);
+console.log('overlay clipboard formats: passed');

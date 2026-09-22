@@ -46,6 +46,11 @@ assert.equal(
   api.viewFileUrl('sub/a.png', 'output'),
   '/api/view?filename=a.png&subfolder=sub&type=output',
 );
+assert.equal(
+  api.viewFileUrl('sub/a.png', 'output', 12.5),
+  '/api/view?filename=a.png&subfolder=sub&type=output&mbv=12.5',
+  '覆盖原文件后必须换查询串，否则浏览器会显示打码前的图',
+);
 assert.equal(api.viewIsStillImage('a.png'), true);
 assert.equal(api.viewIsStillImage('a.mp4'), false);
 

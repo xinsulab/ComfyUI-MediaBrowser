@@ -9,7 +9,7 @@ for (const replace of [false, true]) {
   let resolve;
   let paints = 0;
   const ctx = {
-    censorMode: 'local', inferAbort: new AbortController(), inferBusy: false,
+    fullBlur: false, censorMode: 'local', inferAbort: new AbortController(), inferBusy: false,
     inferDone: 0, inferTotal: 0,
     unhitVisible: () => [{el: {classList: {add(){}, remove(){}}}, path: 'test.png'}],
     flash(){}, updateUnhitHint(){}, syncDetectBtn(){}, syncRedoOnCell(){},
@@ -36,7 +36,7 @@ for (const replace of [false, true]) {
 {
   const pendingFetches = [];
   const ctx = {
-    censorMode: 'local', inferAbort: new AbortController(), inferBusy: false,
+    fullBlur: false, censorMode: 'local', inferAbort: new AbortController(), inferBusy: false,
     inferDone: 0, inferTotal: 0,
     unhitVisible: () => [1, 2, 3].map((i) => ({
       el: { classList: { add() {}, remove() {} } }, path: i + '.png',

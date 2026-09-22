@@ -17,6 +17,12 @@ import pytest
     "run_filter_lifecycle.mjs",
     "run_viewer_lifecycle.mjs",
     "run_picker_session.mjs",
+    "run_png_strip.mjs",
+    "run_paint_helpers.mjs",
+    "run_overlay_lifecycle.mjs",
+    "run_overlay_copy.mjs",
+    "run_fullscreen_layout.mjs",
+    "run_overlay_review.mjs",
 ])
 def test_frontend_lifecycle(script):
     root = Path(__file__).resolve().parents[1]

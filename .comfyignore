@@ -5,3 +5,6 @@ tools/
 docs/
 AGENTS.md
 CLAUDE.md
+
+# 用户编辑数据不属于发布包。
+_overlays/

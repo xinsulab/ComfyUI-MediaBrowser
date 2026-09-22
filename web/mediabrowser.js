@@ -304,6 +304,8 @@ const css = `
 .mb-cellmenu .pg input{margin:0;cursor:pointer;}
 .mb-cellmenu .hint{margin:4px 0 0;font-size:11px;color:#888;}
 .mb-censor-layer{position:absolute;inset:0;z-index:2;pointer-events:none;}
+.mb-seg label{display:inline-flex;align-items:center;gap:4px;padding:4px 7px;white-space:nowrap;cursor:pointer;}
+.mb-seg input[type=checkbox]{accent-color:#c9a227;}
 .mb-censor-box{position:absolute;border-radius:3px;
   backdrop-filter:blur(var(--mb-censor-blur,14px));
   -webkit-backdrop-filter:blur(var(--mb-censor-blur,14px));
@@ -523,7 +525,7 @@ const css = `
 :where(html:not(.mb-touch)) .mb-cell.unusable:hover{border-color:#8a5a2a;}
 .mb-cell.fit img{object-fit:contain;background:#181818;}
 /* 打码：顶栏三态（原图/全幅/局部）+ 单张锁 + 临时揭开。点图片永远是选中。 */
-.mb-cell.blurred img{filter:blur(15px);transform:scale(1.08);}
+.mb-cell.blurred > img{filter:blur(15px);transform:scale(1.08);}
 .mb-cell.blurred.peek img{filter:none;transform:none;}
 /* 局部模式下、检测框还没回来的那一张：先按全幅糊着。
    这是**安全侧**的默认。反过来（先亮原图、检测完再打码）看着更快，但
@@ -531,7 +533,7 @@ const css = `
    正是「别把原图亮出来」。先糊后精确，才是这个功能应有的顺序。
    代价接近零：糊是纯 CSS，瞬时；框到了就摘掉这个类，换成精确的局部遮蔽。
    「跳过河蟹」标过的不在此列 —— 你已经说过那张不用管了。 */
-.mb-cell.censor-wait img{filter:blur(15px);transform:scale(1.08);}
+.mb-cell.censor-wait > img{filter:blur(15px);transform:scale(1.08);}
 .mb-cell.censor-wait.peek img{filter:none;transform:none;}
 /* 左上角第一格给多选勾：闲置藏，悬停 / 已选 / 有选区才露出。
    角落四个控件共用同一份点击区：--mb-peek 跟实际格子宽度响应式变化。
@@ -738,6 +740,48 @@ const css = `
 :where(html:not(.mb-touch)) .mb-play .bar button:hover{background:#3d3d3d;}
 .mb-play .bar button.pick{background:#2e6a3a;border-color:#4caf50;color:#fff;}
 :where(html:not(.mb-touch)) .mb-play .bar button.pick:hover{background:#37804a;}
+/* 编辑工具在原底栏上方展开；复制入口始终保留，绘图期间禁止滑动翻页抢指针。 */
+.mb-play.painting .mb-nav{display:none;}
+.mb-play.painting .mb-paint-bar{display:flex;}
+.mb-paint-bar .paint-effect{grid-column:2 / 4;min-height:38px;background:#333;color:#eee;border:1px solid #555;border-radius:7px;padding:4px 8px}
+/* 工具面板始终浮在画面上方，不参与舞台尺寸分配，进入编辑不再压缩图片。 */
+.mb-play .mb-paint-bar{display:none;position:absolute;z-index:6;margin:0;padding:10px;width:320px;max-width:calc(100% - 24px);max-height:calc(100% - 88px);overflow:auto;box-sizing:border-box;flex-direction:column;align-items:stretch;gap:10px;background:#242527;border:1px solid #505154;border-radius:14px;box-shadow:0 8px 32px #0007;}
+.mb-play .bar:not(.mb-paint-bar){order:2;margin-top:0;}
+.mb-play .mb-paint-head{display:flex;align-items:center;gap:6px;}
+.mb-play .mb-paint-head .mb-paint-grip{flex:1;text-align:left;cursor:grab;touch-action:none;user-select:none;background:transparent;border-color:transparent;padding:4px 6px;font-size:13px;color:#c7c9cd;}
+.mb-play .mb-paint-grip:active{cursor:grabbing;}
+.mb-play .mb-paint-head .paint-close{padding:4px 10px;background:transparent;border-color:transparent;font-size:20px;}
+.mb-play .mb-paint-tools,.mb-play .mb-paint-history{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;}
+.mb-play .mb-paint-bar button{padding:8px 10px;min-height:38px;white-space:nowrap;}
+.mb-play .mb-paint-bar button:disabled{opacity:.4;cursor:default;}
+.mb-play .mb-paint-bar [data-tool].on{background:#385475;border-color:#6994c5;color:#fff;}
+.mb-play .mb-paint-bar .hint{display:block;color:#9da1a8;font-size:11px;line-height:1.5;}
+.mb-play .mb-paint-bar .lab{color:#c7c9cd;font-size:12px;display:grid;grid-template-columns:44px 1fr 36px;align-items:center;gap:8px;}
+.mb-play .mb-paint-bar .lab b{text-align:right;}
+.mb-play .mb-paint-bar input[type=range]{width:100%;min-width:0;accent-color:#8ab4f8;}
+.mb-play details.mb-tool-menu{position:relative;}
+.mb-play details.mb-tool-menu>summary{list-style:none;cursor:pointer;padding:8px;border:1px solid #4a4a4a;border-radius:6px;text-align:center;}
+.mb-play details.mb-tool-menu>summary::-webkit-details-marker{display:none;}
+.mb-play .mb-tool-options{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding-top:6px;}
+.mb-play.paint-roomy .mb-tool-menu>summary{display:none;}
+.mb-play.painting .bar .act.brush{background:#2e5aa0;border-color:#5a8dd6;}
+.mb-fs-exit{position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:2147483647;padding:12px 30px 18px;}
+.mb-fs-exit button{opacity:0;pointer-events:none;transition:opacity .15s;background:#252525;color:#fff;border:1px solid #666;border-radius:8px;min-height:44px;padding:8px 18px;}
+.mb-fs-exit.reveal button,:where(html:not(.mb-touch)) .mb-fs-exit:hover button,.mb-fs-exit:focus-within button{opacity:1;pointer-events:auto;}
+.mb-play .mb-paint-bar .go{background:#2e5aa0;border-color:#5a8dd6;color:#fff;}
+.mb-play .mb-paint-bar .go:disabled{opacity:.4;cursor:not-allowed;}
+.mb-play .mb-paint-layer{position:absolute;z-index:3;pointer-events:none;}
+.mb-play.painting .mb-paint-layer{pointer-events:auto;cursor:crosshair;}
+.mb-play.painting.paint-brush .mb-paint-layer{cursor:none;}
+.mb-play .mb-paint-dot{position:fixed;z-index:5;border:1.5px solid #fff;border-radius:50%;
+  box-shadow:0 0 0 1px rgba(0,0,0,.55);pointer-events:none;transform:translate(-50%,-50%);}
+.mb-play.painting .mb-paint-layer,.mb-play.painting .mb-stage{touch-action:none;}
+.mb-play.painting .mb-stage img{cursor:crosshair;filter:none;}
+.mb-play.painting.paint-brush .mb-stage img{cursor:none;}
+.mb-play.painting .mb-censor-layer{display:none;}
+/* 平移光标优先于笔刷隐藏光标，用户能看出当前手势。 */
+.mb-play.painting.paint-pan .mb-stage img,.mb-play.painting.paint-pan .mb-paint-layer{cursor:grab;}
+.mb-play.painting .mb-stage.panning img,.mb-play.painting .mb-stage.panning .mb-paint-layer{cursor:grabbing;}
 /* ── 触屏：操作条常显 ──
    光靠 @media (hover: none) 不够：带触摸屏的笔记本**同时**有鼠标，
    (hover: hover) 也成立，于是手指用户还是得先"悬停"——根本做不到。
@@ -990,7 +1034,16 @@ function makeLayerStack(hist) {
       const close = stack.pop();
       if (!close) return false;
       fromPop = true;
-      try { close(); } finally { fromPop = false; }
+      try {
+        const pending = close();
+        // 编辑器允许取消关闭；异步确认取消时把这一层历史补回，避免下次后退穿透。
+        if (pending?.then) pending.then((closed) => {
+          if (closed === false && !stack.includes(close)) {
+            stack.push(close);
+            try { hist.pushState({mbLayer:stack.length}, ""); } catch { /* 嵌入环境可能禁用历史 */ }
+          }
+        });
+      } finally { fromPop = false; }
       return true;
     },
     /**
@@ -1504,6 +1557,10 @@ const settingsNav = () => [
   { id: "storage", title: t("存储"), icon: "lucide--folder" },
 ];
 const MB_EN = {
+  "效果": "Effect",
+  "模糊": "Blur",
+  "马赛克": "Mosaic",
+  "强度": "Strength",
   "语言": "Language",
   "跟随 Comfy": "Follow Comfy",
   "当前": "Current",
@@ -1525,6 +1582,46 @@ const MB_EN = {
   "其它": "Other",
   "原图": "Original",
   "全幅": "Full blur",
+  "修改未保存，请重试": "Changes were not saved. Please retry.",
+  "复制图片（含工作流）": "Copy image with workflow",
+  "复制失败": "Copy failed",
+  "复制当前画面并保留工作流": "Copy the visible image with workflow",
+  "完成": "Done",
+  "请先打开视频再复制当前帧": "Open the video before copying its current frame",
+  "遮蔽已保存": "Censor layer saved",
+  "遮蔽已在其他窗口更新，请取消后重新编辑": "Censor layer changed in another window. Cancel and reopen the editor.",
+  "图片已更新，旧遮蔽未应用": "Image changed; the previous censor layer was not applied.",
+  "显示遮蔽": "Show censor layer",
+  "整图模糊": "Blur entire image",
+  "选择": "Select",
+  "框选": "Rectangle",
+  "删除选区": "Delete selected region",
+  "清空遮蔽": "Clear censor layer",
+  "清空并重新识别": "Clear and detect again",
+  "复制含工作流": "Copy with workflow",
+  "复制图片": "Copy image",
+  "复制图片及工作流": "Copy image and workflow",
+  "复制选项": "Copy options",
+  "更多": "More",
+  "拖动工具面板": "Drag tool panel",
+  "恢复自动位置": "Restore automatic position",
+  "遮蔽工具": "Censor tools",
+  "关闭编辑工具": "Close editing tools",
+  "退出全屏": "Exit fullscreen",
+  "浏览器全屏": "Browser fullscreen",
+  "此浏览器不支持全屏": "Fullscreen is not supported by this browser",
+  "无法进入全屏，请检查浏览器权限": "Unable to enter fullscreen. Check browser permissions",
+  "放弃本次修改": "Discard changes",
+  "重做": "Redo",
+  "拖动选区，右下角调整大小": "Drag a region; resize from its lower-right corner",
+  "涂抹需要遮蔽的区域": "Paint areas to censor",
+  "拖动框选需要遮蔽的区域": "Drag a rectangle to censor",
+  "图片和工作流已复制": "Image and workflow copied",
+  "遮蔽尚未保存": "Unsaved censor layer",
+  "保存本次修改后离开？": "Save changes before leaving?",
+  "继续编辑": "Continue editing",
+  "放弃修改": "Discard changes",
+  "保存并离开": "Save and leave",
   "局部": "Local",
   "遮蔽": "Censor",
   "目录": "Folders",
@@ -1562,22 +1659,21 @@ const MB_EN = {
   "原图：关掉全幅和局部（已锁的仍糊）": "Original: turn off full and local blur (locked items stay blurred)",
   "全幅：眼前看得见的图整张糊掉，不跑检测": "Full blur: blur everything on screen, no detection",
   "局部：只遮检测出来的部位。旁边的扫描图标检测眼前这一屏，不会自动跑": "Local: covers detected parts only. The scan icon beside it scans this screen — it never runs on its own",
-  "先点「局部」，再点这个图标检测眼前这一屏。检测不会自动跑。": "Click Local first, then this icon to scan the screen. Detection never runs on its own.",
+  "智能打码当前列表": "Auto-censor visible images",
   "检测中 {done}/{total}，点一下取消。已检完的留着，没检的还在原地。": "Scanning {done}/{total}. Click to stop. Finished results are kept; the rest stay as they are.",
-  "临时看一眼（再点一下糊回去）。只影响眼前这一次，不改任何设置": "Peek (click again to blur). This view only, no settings change",
-  "临时看一眼（再点糊回去）。只影响这一次": "Peek (click again to blur). This time only",
+  "临时显示原图": "Reveal original temporarily",
   "糊回去": "Blur again",
   "移到回收站？": "Move to Recycle Bin?",
   "确定把 {name} 移到系统回收站？": "Move {name} to the Recycle Bin?",
   "文件会从当前目录消失，可以在回收站还原。浏览里没有撤销。": "It leaves this folder. You can restore it from the Recycle Bin. Browse has no undo.",
   "移到回收站": "Move to Recycle Bin",
   "{name}接口是 {status}：必须关掉 Comfy 的 Python 窗口再启动，只刷新网页不够": "{name} API returned {status}. Quit the Comfy Python window and start it again — refreshing the page is not enough",
-  "重新检测这一张：丢掉旧框，只打这一张，不影响别的": "Re-detect this file: drop old boxes, this one only",
-  "重新检测这一张：丢掉旧框，只打这一张": "Re-detect this file: drop old boxes, this one only",
+  "智能打码当前图片，不影响别的": "Re-detect this file: drop old boxes, this one only",
+  "智能打码当前图片": "Auto-censor this image",
   "已跳过河蟹。点一下恢复；点重新检测仍会打这一张": "Skipped. Click to restore; re-detect still scans this file",
-  "跳过河蟹：这一张不跑局部检测": "Skip local detection for this file",
+  "跳过自动检测": "Skip automatic detection",
   "搜索文件名…（当前范围内）": "Search filenames… (this scope)",
-  "选择真实媒体目录。收藏和最近在旁边单独切换": "Choose a media root. Favorites and recent are separate actions beside it",
+  "选择媒体目录": "Choose a media root. Favorites and recent are separate actions beside it",
   "ComfyUI 的 input 目录": "ComfyUI input folder",
   "ComfyUI 的 output 目录": "ComfyUI output folder",
   "ComfyUI 的 temp 目录": "ComfyUI temp folder",
@@ -1590,26 +1686,27 @@ const MB_EN = {
   "切换排版：宫格（等大方格，整齐）／瀑布流（按原图比例，不裁切）": "Layout: grid (equal cells) / masonry (true aspect, no crop)",
   "一行放几个。直接点档位，不用一下下轮换": "Items per row. Pick a size directly — no more clicking through them",
   "只改格子怎么排，不改名单里有哪些文件": "Changes layout only; the file list stays the same",
-  "重新扫一遍当前目录（出片后点这里，不会自动盯盘）": "Rescan this folder (after new outputs; it does not watch the disk)",
+  "刷新当前目录": "Rescan this folder (after new outputs; it does not watch the disk)",
   "设置：显示、检测、存储": "Settings: display, detect, storage",
   "最大化 / 窗口化": "Maximize / windowed",
   "关闭浏览，不改动节点": "Close browse; the node is unchanged",
   "三种显示，同时只能选一个。局部只遮检测出来的部位。旁边的扫描图标检测眼前这一屏，说明在图标上。": "Three views, one at a time. Local covers detected parts only. The scan icon beside it scans this screen; hover the icon for the full explanation.",
-  "整窗截图：把浏览窗口当前画面拷进剪贴板。局域网 IP 下会提示改用 127.0.0.1 或 https": "Copy the browse window to the clipboard. On a LAN IP you may need 127.0.0.1 or https",
+  "复制浏览窗口截图": "Copy browser window screenshot",
   "把当前目录钉进「范围」下拉，下次一步就能回来": "Pin this folder in the scope list",
   "这个 ComfyUI 版本没有工作流标签页，载入会替换当前画布。": "This ComfyUI has no workflow tabs; loading replaces the current graph.",
   "当前画布上没保存的改动会丢失。要继续吗？": "Unsaved changes on the canvas will be lost. Continue?",
-  "关闭（Esc、点画面外，或者再点一下图片）": "Close (Esc, click outside, or click the picture again)",
+  "关闭（Esc）": "Close (Esc, click outside, or click the picture again)",
   "上一个（← 键）": "Previous (←)",
   "下一个（→ 键）": "Next (→)",
-  "截这张进剪贴板（按当前遮蔽）。局域网 IP 下会提示改用 127.0.0.1 或 https": "Copy this frame (current censor). On a LAN IP you may need 127.0.0.1 or https",
+  "复制当前画面": "Copy visible image",
   "移到回收站。会先问你一次；真的会从磁盘拿走": "Move to Recycle Bin. Asks first; it leaves the disk (restorable)",
+  "移到回收站（Delete）": "Move to recycle bin (Delete)",
   "收藏 / 取消收藏": "Favorite / unfavorite",
-  "看提示词和参数，可一键复制": "Prompts and parameters; copy with one click",
+  "查看提示词和参数": "View prompts and parameters",
   "在新标签打开这个文件里存的工作流": "Open the embedded workflow in a new tab",
   "这张已跳过河蟹，不会检测。要检测点重新检测": "This file is skipped. Use re-detect to scan it",
-  "这张检测没完成，再点一次「局部」": "Detection did not finish. Click Local again",
-  "局部接口是 404：必须关掉 Comfy 的 Python 窗口再启动，只刷新网页不够": "Local API is 404. Quit the Comfy Python window and start it again — refreshing is not enough",
+  "检测未完成，请重试智能打码": "Detection did not finish. Click Local again",
+  "遮蔽服务不可用，请重启 ComfyUI": "Censor service unavailable. Restart ComfyUI.",
   "还没装检测运行时。关掉预览，打开右上角设置，在 Comfy 的 Python 里装 onnxruntime": "onnxruntime is missing. Close preview, open Settings, install it in Comfy's Python",
   "还没有检测模型。关掉预览，打开右上角设置下载或指定本机文件": "No detector weights. Close preview, open Settings to download or pick a file",
   "还没装检测运行时。打开右上角设置，在 Comfy 的 Python 环境装 onnxruntime": "onnxruntime is missing. Open Settings and install it in Comfy's Python",
@@ -1643,9 +1740,9 @@ const MB_EN = {
   "收藏的（点格子上的星标加/取消）": "Favorites (toggle the star on a card)",
   "最近选过的": "Recently selected",
   "  （递归全部子目录）": "  (all subfolders)",
-  "已锁：这张以后打开都是糊的。点一下解锁": "Locked: this file stays blurred. Click to unlock",
-  "锁上：这张以后打开也是糊的（只管这一张）": "Lock: this file stays blurred (this file only)",
-  "（顶上是「全幅」，所以现在锁不锁画面都是糊的 —— 切到原图才看得出区别）": "(Full blur is on, so lock does not change the picture until you switch to Original)",
+  "解除整图模糊锁定": "Unlock full-image blur",
+  "锁定整图模糊": "Lock full-image blur",
+  "整图模糊已开启": "Full-image blur is enabled",
   "已锁住这一张（切到原图后才看得出）。再点锁解开": "Locked (visible after you switch to Original). Click the lock again to undo",
   "已解锁这一张（切到原图后才看得出）": "Unlocked (visible after you switch to Original)",
   "已锁：这张以后打开都是糊的。再点锁解开": "Locked: this file stays blurred. Click the lock again to undo",
@@ -1665,7 +1762,7 @@ const MB_EN = {
   "窗口不锁：仍可滚动、筛选、看大图。磁盘和网会忙一会儿，同时只拉 2 张，避免把机器打满。再点这个按钮就取消。": "The window stays usable: you can still scroll, filter and open the large view. Disk and network will be busy for a while. Only 2 files download at once so the machine is not flooded. Click the same button again to cancel.",
   "当前有 {n} 张，可能要很久。张数太多时，先关掉「递归全部」、用搜索或类型筛小范围。": "There are {n} images; this can take a long time. If that is too many, turn off Recurse all, or narrow with search / type filters.",
   "开始预加载": "Start preloading",
-  "预加载当前列表里的原图。会先问你一次。视频不拉。窗口不锁，再点一次取消。": "Preload originals for the current list. Asks first. Videos are skipped. The window stays usable; click again to cancel.",
+  "预加载当前列表图片": "Preload listed images",
   "正在预加载原图 {done}/{total}。再点一次取消。浏览和看大图不受影响。": "Preloading originals {done}/{total}. Click again to cancel. Browsing and the large view still work.",
   "当前筛选里没有可预加载的图片": "No images to preload in the current filter",
   "已预加载 {n} 张原图，点开大图会直接出全图": "Preloaded {n} originals. The large view should open at full size.",
@@ -1680,9 +1777,9 @@ const MB_EN = {
   "{nd} 个文件夹 · {nf} 个文件": "{nd} folders · {nf} files",
   "眼前还有 {n} 张没检测（不是整个文件夹）": "{n} on this screen not detected yet (this screen only, not the whole folder)",
   "眼前这一屏都已检测": "This screen is fully detected",
-  "眼前这一屏都已检测。滚到没检过的图，再点局部旁边的扫描图标": "This screen is done. Scroll to new images, then press the scan icon beside Local",
-  "检测眼前看得见的 {n} 张，标出要遮的部位。结果存下来，同一张图不会再检第二次。不检整个文件夹。": "Scans the {n} images on screen and marks the parts to cover. Results are stored, so an image is never scanned twice. Does not scan the whole folder.",
-  "眼前这一屏都检测过了。滚到没检过的图，这里会自己亮起来。": "Everything on this screen is scanned. Scroll to new images and this lights up again.",
+  "当前可见图片已检测": "This screen is done. Scroll to new images, then press the scan icon beside Local",
+  "智能打码当前可见的 {n} 张图片": "Auto-censor {n} visible images",
+  "当前可见图片已检测": "Visible images have been detected",
   "文件不存在": "File not found",
   "已取消跳过河蟹，开始检测这一张": "Skip cleared; detecting this file",
   "正在加载检测模型（只打眼前这一屏）…": "Loading the detector (this screen only)…",
@@ -1692,6 +1789,29 @@ const MB_EN = {
   "图加载失败": "Image failed to load",
   "图没生成出来": "Image was not produced",
   "单图已复制": "Image copied",
+  "纯图": "Plain",
+  "复制纯图": "Copy plain",
+  "复制当前画面，不含工作流": "Clipboard image without workflow. Original pixels when uncensored; same limits as snapshot when blurred",
+  "已复制纯图（无工作流）": "Plain image copied (no workflow)",
+  "复制图片（不含工作流）": "Copy image without workflow",
+  "框选打码": "Box mosaic",
+  "涂抹打码": "Brush mosaic",
+  "编辑遮蔽：框选": "Edit censor layer with rectangles",
+  "编辑遮蔽：笔刷": "Edit censor layer with a brush",
+  "保存遮蔽": "Save censor layer",
+  "撤销": "Undo last",
+  "取消": "Cancel mosaic",
+  "色块": "Block",
+  "笔刷": "Brush",
+  "先框一块或涂一笔，再写入": "Select a box or paint a stroke first, then write",
+  "只能给静图打码": "Only still images can be mosaicked",
+  "已丢掉这次打码": "Discarded this mosaic",
+  "已保存遮蔽（马赛克）": "Wrote mosaic back to the file",
+  "保存遮蔽？会改像素，PNG 里的工作流还在。浏览里没有撤销。": "Write the original file? Pixels change; PNG workflows stay. There is no undo in the browser.",
+  "打码": "Mosaic",
+  "打码失败": "Mosaic failed",
+  "框选：拖出要打码的矩形。Esc 取消": "Box: drag the area to mosaic. Esc cancels",
+  "涂抹：按住涂要打的地方。Esc 取消": "Brush: hold and paint. Esc cancels",
   "连不上 Comfy。确认窗口还在跑，再打开设置": "Cannot reach Comfy. Make sure it is running, then open Settings again",
   "遮蔽接口是 404：现在这个 Comfy 进程启动时还没有这条路由。只刷新网页或点前端重启不够，必须关掉 Python 窗口再启动": "Censor API is 404. This Python process started without that route. Quit the Python window and start it again",
   "遮蔽接口返回 HTTP {status}。看 Comfy 控制台里 [MediaBrowser] 那一行": "Censor API returned HTTP {status}. Check the [MediaBrowser] line in the Comfy console",
@@ -1722,7 +1842,7 @@ const MB_EN = {
   "填进节点，并关掉浏览窗口": "Fills it into the node and closes the browser",
   "看大图 / 播放": "Large view / play",
   "看的是原文件；打开后可以左右翻（← →），滚轮放大缩小": "Shows the original file; use ← → to flip through, mouse wheel to zoom",
-  "滚轮放大缩小。放大后拖动画面。未放大时点图片关掉": "Scroll wheel zooms. Drag when zoomed. Click the picture to close when not zoomed",
+  "滚轮缩放，放大后拖动查看": "Scroll wheel zooms. Drag when zoomed. Click the picture to close when not zoomed",
   "锁住这张": "Lock this one",
   "解锁这张": "Unlock this one",
   "收藏": "Favourite",
@@ -1730,13 +1850,13 @@ const MB_EN = {
   "钉进收藏列表，不会被新的挤掉": "Pins it to the favourites list; new files will not push it out",
   "从收藏列表里移走": "Takes it out of the favourites list",
   "截进剪贴板": "Copy frame",
-  "按当前遮蔽截这一张：原图 / 全幅 / 局部": "Copies this one at the current censor level: original / full / local",
+  "复制当前画面": "Copy visible image",
   "提示词和参数": "Prompt and settings",
-  "这次用的词和参数，可一键复制": "The prompt and settings used for this run; one click to copy",
+  "查看并复制生成参数": "The prompt and settings used for this run; one click to copy",
   "打开工作流": "Open workflow",
   "在新标签里打开这个文件存的流，不动你当前的画布": "Opens the workflow stored in this file in a new tab, leaving your canvas alone",
   "移到回收站": "Move to recycle bin",
-  "会先问你一次；真的会从磁盘拿走（可在系统回收站还原）": "Asks first; it really leaves the disk (restorable from the system recycle bin)",
+  "移到系统回收站，可还原": "Asks first; it really leaves the disk (restorable from the system recycle bin)",
   "这一张的操作：用这张 / 看大图 / 收藏 / 遮蔽 / 删除…": "Actions for this item: use it / large view / favourite / censor / delete…",
   "缩略图清晰度": "Thumbnail sharpness",
   "只影响格子里的封面。点开查看 / 播放永远是原片，跟这里无关。": "Only affects grid covers. View / play is always the original file.",
@@ -1766,19 +1886,19 @@ const MB_EN = {
   "3 张": "3 at a time",
   "4 张（机器比较强）": "4 at a time (stronger machines)",
   "改成 1 张：检测时还要出图、机器比较吃力，选这个。3 或 4 张：机器比较强才有用；模型一次只能跑一张，多出来的工位只是提前读盘。已经检过的图不会重跑。": "Pick 1 if the machine is also generating images or feels sluggish. 3 or 4 only help on stronger machines — the model still runs one image at a time, extra slots just preload the next files. Already scanned files are not run again.",
-  "已改成同时检测 {n} 张。下一轮点局部旁边的扫描图标按这个数跑。": "Now scans {n} at a time. The next press of the scan icon beside Local uses this number.",
+  "检测并发数已设为 {n}": "Now scans {n} at a time. The next press of the scan icon beside Local uses this number.",
   "运行时要装到 Comfy 那个 Python：pip install onnxruntime。": "Install in Comfy's Python: pip install onnxruntime.",
   "推荐模型 640m": "Recommended model 640m",
   "只推这一份（约 99MB，效果最好）。失败再走 {link} 手动填路径。": "This one file only (~99MB, best result). If download fails, use {link} and paste a path.",
   "下载 640m": "Download 640m",
   "重新下载": "Download again",
-  "局部档下，还没检测的图": "Local mode: images not detected yet",
-  "检测要按顶栏局部旁边的扫描图标，不会自动跑。这里决定按之前那些图长什么样。": "Detection runs only when you press the scan icon beside Local. This decides how those images look until then.",
+  "尚未检测的图片": "Local mode: images not detected yet",
+  "设置尚未检测的图片如何显示": "Detection runs only when you press the scan icon beside Local. This decides how those images look until then.",
   "直接显示原图（默认）": "Show the original (default)",
   "先全部遮住": "Cover everything first",
   "选「先全部遮住」：只有检测确认过的才逐张露出来，适合有人在旁边时慢慢翻。": "With Cover everything first, images appear one by one as detection clears them — handy when someone else is around.",
   "已改成：没检测过的先全部遮住，检测确认过的才逐张露出来": "Changed: undetected images stay covered until detection clears them",
-  "已改成：没检测过的直接显示原图，按局部旁边的扫描图标才盖上遮蔽": "Changed: undetected images show as-is; press the scan icon beside Local to censor them",
+  "未检测的图片将显示原图": "Changed: undetected images show as-is; press the scan icon beside Local to censor them",
   "回到最上面（滚下去之后才出现）": "Back to the top (appears once you scroll down)",
   "缩略图": "Thumbnails",
   "检测框": "Detection boxes",
@@ -1820,7 +1940,7 @@ const MB_EN = {
   "脸（男）": "Face (M)",
   "只改怎么画，不用重新检测。": "Only changes drawing. No need to re-detect.",
   "只改这一张": "This item only",
-  "只调这一张的遮蔽：力度、部位、打码范围": "Adjust censoring for this item only: level, parts, coverage",
+  "当前图片的遮蔽设置": "Censor settings for this image",
   "判定：哪些框够格被遮": "Detection: which boxes qualify",
   "画法：每个框画多大、多糊": "Drawing: how big and how blurred each box is",
   "改回跟随全局": "Follow global again",
@@ -1840,7 +1960,7 @@ const MB_EN = {
   "清缩略图": "Clear thumbnails",
   "腾服务器磁盘用。浏览器自己还缓存 7 天，画面多半不变；要看重新生成得强刷（Ctrl+F5）。": "Frees server disk. Your browser still caches them for 7 days, so the grid will look the same — hard-refresh (Ctrl+F5) to watch them rebuild.",
   "清检测框": "Clear boxes",
-  "局部记住的框。下次要点「局部」重检。": "Saved local boxes. Click Local again to re-detect.",
+  "清除自动检测缓存，不影响手动遮蔽": "Saved local boxes. Click Local again to re-detect.",
   "偏好": "Preferences",
   "恢复默认界面": "Reset interface",
   "语言、格子、递归、类型、排序、点击行为、清晰度、遮蔽档位、滑条、检测并发和浮钮位置。收藏和锁不动。": "Language, grid, recursive, types, sort, click action, thumbnail quality, censor mode, sliders, detect concurrency and FAB position. Favorites and locks stay.",
@@ -1861,11 +1981,11 @@ const MB_EN = {
   "推荐模型已经在，不用再下": "Recommended model is already here",
   "重新下载 640m？": "Download 640m again?",
   "已有的推荐模型还能用。只有这次下完并通过校验才会替换。": "The current model still works. It is replaced only after this download passes the check.",
-  "已切换权重。已有框按新模型重画；眼前还没检过的点局部旁边的扫描图标": "Weights switched. Existing boxes redraw; undetected ones need the scan icon beside Local",
+  "检测模型已切换": "Weights switched. Existing boxes redraw; undetected ones need the scan icon beside Local",
   "保存失败": "Save failed",
   "已清缩略图 {n} 个，服务器磁盘腾出来了。画面不会变 —— 浏览器还缓存着，强刷才重新生成": "Cleared {n} thumbnails and freed server disk. The grid stays as-is — your browser still has them; hard-refresh to rebuild",
   "清缩略图失败": "Could not clear thumbnails",
-  "已清检测框 {n} 个。局部要重新点一次": "Cleared {n} box caches. Click Local again",
+  "已清除 {n} 项检测缓存": "Cleared {n} box caches. Click Local again",
   "清检测框失败": "Could not clear boxes",
   "界面已回默认：语言跟随 ComfyUI、图+视频、递归开、瀑布流、遮蔽关": "Interface reset: language follows ComfyUI, images+video, recursive on, masonry, censor off",
   "清空收藏和标记？": "Clear favorites and marks?",
@@ -1919,7 +2039,7 @@ const MB_EN = {
   "非法目录名": "Invalid folder name",
   "语言会立刻作用在浏览窗口。自动＝跟 Comfy 设置里的界面语言。": "Language applies to this browse window immediately. Auto follows Comfy's UI language.",
   "已重新扫描 · {n} 个文件": "Rescanned · {n} files",
-  "已重新检测。切到「局部」才能看到框": "Re-detected. Switch to Local to see boxes",
+  "智能打码完成": "Re-detected. Switch to Local to see boxes",
   "{n} 张": "{n}",
   "这段不是从采样器那条线上拿的，是从流里的显示节点捞的 —— 反推类流会把现场生成的词只留在显示节点里。内容多半就是这次用的词，但位置证明不了，照抄前自己扫一眼。": "This was taken from a display node, not the sampler line. Reverse-prompt graphs often leave the live words only there. It is probably what was used — skim it before copying.",
 };
@@ -1978,29 +2098,52 @@ const mapBoxToEl = (box, imgW, imgH, elW, elH, contain) => {
   const ox = (elW - dw) / 2, oy = (elH - dh) / 2;
   return { x: box.x * dw + ox, y: box.y * dh + oy, w: box.w * dw, h: box.h * dh };
 };
-const paintCensorOverlay = (cell, boxes, dim, contain, rule) => {
-  cell.querySelector(".mb-censor-layer")?.remove();
-  const vis = visibleBoxes(boxes, rule);
-  if (!vis.length || !cell.clientWidth) return;
-  const layer = document.createElement("div");
-  layer.className = "mb-censor-layer";
-  // 这一张单独设过糊度就盖在这一层上；没设就继承 .mb-box / .mb-play 上的全局值
-  if (rule && rule.blur != null) layer.style.setProperty("--mb-censor-blur", rule.blur + "px");
-  const elW = cell.clientWidth, elH = cell.clientHeight;
-  const imgW = dim?.[0] || elW, imgH = dim?.[1] || elH;
-  for (const b of vis) {
-    const m = mapBoxToEl(b, imgW, imgH, elW, elH, contain);
-    if (m.w < 2 || m.h < 2) continue;
-    const d = document.createElement("div");
-    d.className = "mb-censor-box";
-    d.style.cssText = `left:${m.x}px;top:${m.y}px;width:${m.w}px;height:${m.h}px`;
-    layer.appendChild(d);
+const paintCensorOverlay = (cell, boxes, dim, contain, rule, root, path, flags = {showOverlay:true,fullBlur:false}) => {
+  const token = (cell._overlaySeq || 0)+1;cell._overlaySeq=token;
+  if (!root || !path) return;
+  if (!canPaintFile(path)) {
+    // 动态媒体保持逐帧原画面，只叠检测框，不能走静态 PNG 合成而冻结播放。
+    cell.querySelector(".mb-censor-layer")?.remove();
+    if (!flags.showOverlay || flags.peeking) return;
+    const vis=visibleBoxes(boxes || regionMem.get(regionKey(root,path))?.boxes,rule);
+    const layer=document.createElement("div");layer.className="mb-censor-layer";
+    if(rule?.blur!=null)layer.style.setProperty("--mb-censor-blur",rule.blur+"px");
+    const media=cell.classList.contains("mb-stage") ? cell.querySelector("img, video") : null;
+    const width=media?.offsetWidth || cell.clientWidth,height=media?.offsetHeight || cell.clientHeight;
+    if(media)layer.style.cssText=`inset:auto;left:${media.offsetLeft}px;top:${media.offsetTop}px;width:${width}px;height:${height}px;transform:${media.style.transform || "none"};transform-origin:center center;`;
+    for(const b of vis){
+      const r=mapBoxToEl(b,dim?.[0] || width,dim?.[1] || height,width,height,contain);
+      const box=document.createElement("div");box.className="mb-censor-box";
+      box.style.cssText=`left:${r.x}px;top:${r.y}px;width:${r.w}px;height:${r.h}px`;layer.appendChild(box);
+    }
+    cell.appendChild(layer);return;
   }
-  cell.appendChild(layer);
+  void (async()=>{
+    try {
+      await loadOverlay(root,path);
+      const snapshot={...currentOverlay(root,path,rule),...flags};
+      if (!snapshot.showOverlay && !snapshot.fullBlur) return;
+      const url=await overlayPreview(root,path,snapshot);
+      if (!cell.isConnected || cell._overlaySeq!==token || (cell.dataset.path && cell.dataset.path!==path)) return;
+      const layer=document.createElement("div");layer.className="mb-censor-layer";
+      if(cell.classList.contains("mb-stage")) {
+        const original=cell.querySelector("img:not(.mb-overlay-image)");
+        if(!original)return;
+        layer.style.cssText=`inset:auto;left:${original.offsetLeft}px;top:${original.offsetTop}px;width:${original.offsetWidth}px;height:${original.offsetHeight}px;transform:${original.style.transform || "none"};transform-origin:center center;`;
+      }
+      const img=document.createElement("img");img.className="mb-overlay-image";img.alt="";img.draggable=false;
+      img.style.cssText=`background:transparent;box-shadow:none;border-radius:0;transform:none;position:absolute;inset:0;width:100%;height:100%;max-width:none;max-height:none;object-fit:${contain?"contain":"cover"};filter:none;`;
+      img.onload=()=>{
+        if (!cell.isConnected || cell._overlaySeq!==token) return;
+        cell.querySelector(".mb-censor-layer")?.remove();cell.appendChild(layer);cell._visibleOverlay=overlayClone(snapshot);
+        cell.classList.remove("censor-wait");
+      };layer.appendChild(img);img.src=url;
+    } catch(e) {if(cell.isConnected && cell._overlaySeq===token) cell.title=e.message;}
+  })();
 };
 const attachPeekBtn = (el) => {
   if (el.querySelector(".mb-peek")) return;
-  const off = () => t("临时看一眼（再点一下糊回去）。只影响眼前这一次，不改任何设置");
+  const off = () => t("临时显示原图");
   const pk = mbElButton("mb-peek");
   setIco(pk, "lucide--eye");
   pk.title = off();
@@ -2140,6 +2283,153 @@ const postTrash = async (root, path) => {
   if (!r.ok || j.error) throw new Error(j.error || `HTTP ${r.status}`);
   return j;
 };
+/* OVERLAY_HELPERS_BEGIN */
+const overlayClone = (v) => JSON.parse(JSON.stringify(v));
+const overlayMatch = (a, b) => {
+  if (a.k !== "r" || b.k !== "r" || a.label !== b.label) return false;
+  const area = Math.max(0, Math.min(a.x+a.w,b.x+b.w)-Math.max(a.x,b.x)) *
+    Math.max(0, Math.min(a.y+a.h,b.y+b.h)-Math.max(a.y,b.y));
+  const union = a.w*a.h+b.w*b.h-area;
+  return (union > 0 && area/union >= .5) ||
+    (b.x+b.w/2 >= a.x && b.x+b.w/2 <= a.x+a.w && b.y+b.h/2 >= a.y && b.y+b.h/2 <= a.y+a.h);
+};
+const overlayMerge = (record, detected, explicit = false) => {
+  const manual=record.ops.filter(op=>!op.auto);
+  // 主动重新识别表示允许恢复已删除区域；后台检测仍尊重删除记录。
+  // 保留人工区域，避免在已调整的区域上再叠一层自动效果。
+  const suppressed=explicit ? [] : (record.suppressed || []);
+  return {...overlayClone(record),suppressed:overlayClone(suppressed),
+    ops:[...manual,...detected.filter(op=>!suppressed.some(old=>overlayMatch(old,op)) &&
+      !(explicit && manual.some(old=>overlayMatch(old,op))))]};
+};
+const overlayFlags = (mode, full = false, locked = false, peeking = false) => ({
+  showOverlay: mode === "local", fullBlur: full || mode === "full" || locked, peeking,
+});
+/* OVERLAY_HELPERS_END */
+const overlayCache = new Map();
+const overlayRequests = new Map();
+const overlayUrlCache = new Map();
+const overlayPreviewPending = new Map();
+const overlayEvents = new EventTarget();
+const overlayId = () => globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`;
+const overlayApi = async (root, path, body, signal, render = false) => {
+  const url = render ? "/mediabrowser/render" : "/mediabrowser/overlay";
+  const r = await fetch(body ? url : `${url}?type=${encodeURIComponent(root)}&filename=${encodeURIComponent(path)}`, body ? {
+    method: "POST", headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({type:root, filename:path, ...body}), signal,
+  } : {signal});
+  if (!r.ok) {
+    const j = await r.json().catch(() => ({}));
+    throw new Error(j.error || t("遮蔽服务不可用，请重启 ComfyUI"));
+  }
+  return render ? r.blob() : r.json();
+};
+const loadOverlay = (root, path, force = false) => {
+  const key = regionKey(root,path);
+  if (!force && overlayCache.has(key)) return Promise.resolve(overlayCache.get(key));
+  if (!force && overlayRequests.has(key)) return overlayRequests.get(key);
+  const task = overlayApi(root,path).then((rec) => {
+    if (overlayRequests.get(key) === task) overlayCache.set(key,rec); return rec;
+  }).finally(() => { if (overlayRequests.get(key) === task) overlayRequests.delete(key); });
+  overlayRequests.set(key,task);
+  return task;
+};
+const saveOverlay = async (root,path,rec,signal) => {
+  const saved = await overlayApi(root,path,{...rec,expectedRevision:rec.revision},signal);
+  overlayRequests.delete(regionKey(root,path));
+  overlayCache.set(regionKey(root,path),saved);
+  overlayEvents.dispatchEvent(new CustomEvent("saved",{detail:{root,path}}));
+  return saved;
+};
+const detectedOps = (boxes,rule) => (boxes || []).flatMap((raw,i) => visibleBoxes([raw],rule).map(b=>({
+  id:`auto-${i}`, k:"r", auto:true, label:b.label || raw.label || "", block:16, effect:"blur", strength:rule?.blur || censorBlur(), raw,
+  x:Math.max(0,b.x), y:Math.max(0,b.y),
+  w:Math.min(b.w,1-Math.max(0,b.x)), h:Math.min(b.h,1-Math.max(0,b.y)),
+}))).filter(b=>b.w>0 && b.h>0);
+const currentOverlay = (root,path,rule) => {
+  const rec=overlayCache.get(regionKey(root,path));
+  if(rec?.exists){const copy=overlayClone(rec);copy.ops=copy.ops.flatMap(op=>op.auto && op.raw ? detectedOps([op.raw],rule).map(next=>({...next,id:op.id})) : [op]);return copy;}
+  return {...(rec || {}),ops:rec?.stale ? [] : detectedOps(regionMem.get(regionKey(root,path))?.boxes,rule),suppressed:[]};
+};
+const overlayBlob = (root,path,snapshot,keepWorkflow=false,signal) =>
+  overlayApi(root,path,{...snapshot,keepWorkflow},signal,true);
+// 预览与复制由同一渲染接口生成，避免浏览器 CSS 模糊与导出画法不一致。
+const overlayPreview = (root,path,snapshot) => {
+  const key=JSON.stringify([root,path,snapshot]);
+  if(overlayUrlCache.has(key))return Promise.resolve(overlayUrlCache.get(key));
+  if(overlayPreviewPending.has(key))return overlayPreviewPending.get(key);
+  const pending=overlayBlob(root,path,{...snapshot,previewMax:1536}).then(blob=>{
+    const url=URL.createObjectURL(blob);overlayUrlCache.set(key,url);
+    if(overlayUrlCache.size>40){const first=overlayUrlCache.keys().next().value;URL.revokeObjectURL(overlayUrlCache.get(first));overlayUrlCache.delete(first);}
+    return url;
+  }).finally(()=>overlayPreviewPending.delete(key));
+  overlayPreviewPending.set(key,pending);return pending;
+};
+const overlayLeaveChoice = () => new Promise(resolve=>{
+  const ov=document.createElement("div");ov.className="mb-confirm";
+  ov.innerHTML=`<div class="card" role="dialog" aria-modal="true"><h4>${escHtml(t("遮蔽尚未保存"))}</h4><p>${escHtml(t("保存本次修改后离开？"))}</p><div class="acts"><button type="button" data-choice="cancel">${escHtml(t("继续编辑"))}</button><button type="button" data-choice="discard">${escHtml(t("放弃修改"))}</button><button type="button" data-choice="save">${escHtml(t("保存并离开"))}</button></div></div>`;
+  const done=(v)=>{document.removeEventListener("keydown",key,true);ov.remove();resolve(v);};
+  const key=(e)=>{if(e.key==="Escape"){e.preventDefault();e.stopImmediatePropagation();done("cancel");}};
+  ov.querySelectorAll("button").forEach(b=>b.onclick=()=>done(b.dataset.choice));
+  document.addEventListener("keydown",key,true);document.body.appendChild(ov);ov.querySelector("button").focus();
+});
+const canPaintFile = (p) => KIND_IMG.test(p) && !/\.gif$/i.test(p);
+const mosaicPatch = (ctx, x, y, w, h, block) => {
+  const sx = Math.max(0, Math.floor(x)), sy = Math.max(0, Math.floor(y));
+  const sw = Math.max(1, Math.min(ctx.canvas.width - sx, Math.ceil(w)));
+  const sh = Math.max(1, Math.min(ctx.canvas.height - sy, Math.ceil(h)));
+  if (sw < 2 || sh < 2) return;
+  const bw = Math.max(1, Math.floor(sw / block));
+  const bh = Math.max(1, Math.floor(sh / block));
+  const tmp = document.createElement("canvas");
+  tmp.width = bw; tmp.height = bh;
+  const t = tmp.getContext("2d");
+  t.imageSmoothingEnabled = false;
+  t.drawImage(ctx.canvas, sx, sy, sw, sh, 0, 0, bw, bh);
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(tmp, sx, sy, sw, sh);
+  ctx.imageSmoothingEnabled = true;
+};
+const paintDrawOp = (ctx, op, w, h, block) => {
+  if (op.k === "r") {
+    if(op.effect === "blur") {blurPatch(ctx,op.x*w,op.y*h,op.w*w,op.h*h,op.strength || 14);return;}
+    mosaicPatch(ctx, op.x * w, op.y * h, op.w * w, op.h * h, block);
+    return;
+  }
+  const r = paintClampBrush(op.r) * Math.min(w, h);
+  const pts = op.pts || [];
+  if (!pts.length) return;
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const p of pts) {
+    const x = p[0] * w, y = p[1] * h;
+    if (x < x0) x0 = x; if (y < y0) y0 = y;
+    if (x > x1) x1 = x; if (y > y1) y1 = y;
+  }
+  const sx = Math.max(0, Math.floor(x0 - r));
+  const sy = Math.max(0, Math.floor(y0 - r));
+  const sw = Math.min(w - sx, Math.ceil((x1 - x0) + r * 2));
+  const sh = Math.min(h - sy, Math.ceil((y1 - y0) + r * 2));
+  if (sw < 2 || sh < 2) return;
+  // 先在包围盒上打马赛克，再用圆头折线当蒙版贴回去。
+  // 不能在主 canvas 上 destination-in：那会把框外像素也抠掉。
+  const mosaic = document.createElement("canvas");
+  mosaic.width = sw; mosaic.height = sh;
+  const m = mosaic.getContext("2d");
+  m.drawImage(ctx.canvas, sx, sy, sw, sh, 0, 0, sw, sh);
+  if(op.effect==="blur")blurPatch(m,0,0,sw,sh,op.strength || 14);
+  else mosaicPatch(m, 0, 0, sw, sh, block);
+  m.globalCompositeOperation = "destination-in";
+  m.strokeStyle = "#000";
+  m.lineCap = "round";
+  m.lineJoin = "round";
+  m.lineWidth = r * 2;
+  m.beginPath();
+  m.moveTo(pts[0][0] * w - sx, pts[0][1] * h - sy);
+  for (let i = 1; i < pts.length; i++) m.lineTo(pts[i][0] * w - sx, pts[i][1] * h - sy);
+  if (pts.length === 1) m.lineTo(pts[0][0] * w - sx + 0.01, pts[0][1] * h - sy);
+  m.stroke();
+  ctx.drawImage(mosaic, sx, sy);
+};
 const forgetPath = (folder, path) => {
   blurMarks(folder);
   if (blurCache?.[folder]) {
@@ -2169,14 +2459,14 @@ const attachRedoBtn = (el, fn) => {
   if (el.querySelector(".mb-redo")) return;
   const b = mbElButton("mb-redo");
   b.innerHTML = mbScanIco();
-  b.title = t("重新检测这一张：丢掉旧框，只打这一张，不影响别的");
+  b.title = t("智能打码当前图片，不影响别的");
   b.onclick = (ev) => { ev.stopPropagation(); fn(); };
   el.appendChild(b);
 };
 const detachRedoBtn = (el) => el?.querySelector(".mb-redo")?.remove();
 const skipTitleOf = (on) => on
   ? t("已跳过河蟹。点一下恢复；点重新检测仍会打这一张")
-  : t("跳过河蟹：这一张不跑局部检测");
+  : t("跳过自动检测");
 const syncSkipFace = (btn, on) => {
   if (!btn) return;
   setIco(btn, "lucide--ban");
@@ -2196,6 +2486,90 @@ const attachSkipBtn = (el, on, fn) => {
 const canvasToBlob = (canvas) => new Promise((res, rej) => {
   canvas.toBlob((b) => (b ? res(b) : rej(new Error("toBlob"))), "image/png");
 });
+/* PNG_STRIP_BEGIN */
+// 复制纯图时丢掉 Comfy 写进 PNG 的 prompt/workflow。
+// 只删 tEXt/iTXt/zTXt，IDAT 等像素块原样留下；不是 canvas 重编码。
+const PNG_SIG = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]);
+const PNG_TEXT_TYPE = { tEXt: 1, iTXt: 1, zTXt: 1 };
+const stripPngTextChunks = (input) => {
+  const u8 = input instanceof Uint8Array ? input : new Uint8Array(input);
+  if (u8.length < 8) return u8;
+  for (let i = 0; i < 8; i++) {
+    if (u8[i] !== PNG_SIG[i]) return u8;
+  }
+  const parts = [u8.subarray(0, 8)];
+  let p = 8;
+  let dropped = false;
+  while (p + 12 <= u8.length) {
+    const len = ((u8[p] << 24) | (u8[p + 1] << 16) | (u8[p + 2] << 8) | u8[p + 3]) >>> 0;
+    const type = String.fromCharCode(u8[p + 4], u8[p + 5], u8[p + 6], u8[p + 7]);
+    const total = 12 + len;
+    if (p + total > u8.length) {
+      parts.push(u8.subarray(p));
+      break;
+    }
+    if (PNG_TEXT_TYPE[type]) dropped = true;
+    else parts.push(u8.subarray(p, p + total));
+    p += total;
+    if (type === "IEND") break;
+  }
+  if (!dropped) return u8;
+  let n = 0;
+  for (const a of parts) n += a.length;
+  const out = new Uint8Array(n);
+  let o = 0;
+  for (const a of parts) {
+    out.set(a, o);
+    o += a.length;
+  }
+  return out;
+};
+/* PNG_STRIP_END */
+/* PAINT_HELPERS_BEGIN */
+// 框选 / 涂抹打码的坐标都归一化到 0–1，跟预览缩放无关。
+// 保存时按原图像素算马赛克，预览只是同一套操作的缩小预演。
+const PAINT_BLOCK_MIN = 6;
+const PAINT_BLOCK_MAX = 48;
+const PAINT_BRUSH_MIN = 0.008;
+const PAINT_BRUSH_MAX = 0.12;
+const paintClampBlock = (n) => {
+  const v = +n;
+  if (!Number.isFinite(v)) return 16;
+  return Math.min(PAINT_BLOCK_MAX, Math.max(PAINT_BLOCK_MIN, Math.round(v)));
+};
+const paintClampBrush = (n) => {
+  const v = +n;
+  if (!Number.isFinite(v)) return 0.03;
+  return Math.min(PAINT_BRUSH_MAX, Math.max(PAINT_BRUSH_MIN, v));
+};
+const paintNormFromClient = (cx, cy, rect) => {
+  if (!rect || !(rect.width > 0) || !(rect.height > 0)) return null;
+  const x = (cx - rect.left) / rect.width;
+  const y = (cy - rect.top) / rect.height;
+  return {
+    x: Math.min(1, Math.max(0, x)),
+    y: Math.min(1, Math.max(0, y)),
+    outside: x < 0 || y < 0 || x > 1 || y > 1,
+  };
+};
+const paintNormRect = (a, b) => {
+  const x = Math.min(a.x, b.x);
+  const y = Math.min(a.y, b.y);
+  return { k: "r", x, y, w: Math.abs(b.x - a.x), h: Math.abs(b.y - a.y) };
+};
+const paintRectTooSmall = (box) => !box || box.w < 0.004 || box.h < 0.004;
+const paintAppendDot = (pts, p, minGap) => {
+  const last = pts[pts.length - 1];
+  if (last && Math.hypot(p.x - last.x, p.y - last.y) < minGap) return pts;
+  return pts.concat([p]);
+};
+const paintStrokeOp = (pts, r) => ({
+  k: "s",
+  r: paintClampBrush(r),
+  pts: pts.map((p) => [p.x, p.y]),
+});
+const paintCanSave = (ops) => Array.isArray(ops) && ops.length > 0;
+/* PAINT_HELPERS_END */
 function fitFixedPop(pw, ph, ar, vw, vh, gap) {
   gap = gap == null ? 8 : gap;
   const pad = 8;
@@ -2387,23 +2761,45 @@ const clipWhy = (e) => {
   return raw ? t("没能放进剪贴板：{raw}", { raw }) : t("没能放进剪贴板。先点一下页面再截");
 };
 // 必须在点击的同一拍调用 clipboard.write。先 await 再写，手势会过期被拒。
-const writePng = async (blobPromise) => {
-  if (!navigator.clipboard?.write || typeof ClipboardItem !== "function") {
-    throw new Error(clipWhy(new Error("no api")));
-  }
-  const pending = Promise.resolve(blobPromise).then((blob) => {
-    if (!blob) throw new Error(t("图没生成出来"));
-    return blob.type === "image/png" ? blob : blob.slice(0, blob.size, "image/png");
-  });
-  try {
-    await navigator.clipboard.write([new ClipboardItem({ "image/png": pending })]);
-  } catch (e) {
-    try {
-      const blob = await pending;
-      await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
-    } catch (e2) {
-      throw new Error(clipWhy(e2));
+/* PNG_WORKFLOW_BEGIN */
+const pngWorkflowText = (bytes) => {
+  const view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);
+  for(let at=8;at+12<=bytes.length;){
+    const size=view.getUint32(at),end=at+8+size;if(end+4>bytes.length)break;
+    const type=String.fromCharCode(...bytes.subarray(at+4,at+8));
+    if(type==="tEXt" || type==="iTXt"){
+      const raw=bytes.subarray(at+8,end),zero=raw.indexOf(0);
+      if(new TextDecoder().decode(raw.subarray(0,zero))==="workflow"){
+        let start=zero+1;
+        if(type==="iTXt"){
+          if(raw[start]!==0)return "";
+          start+=2;start=raw.indexOf(0,start)+1;start=raw.indexOf(0,start)+1;
+        }
+        const text=type === "tEXt" ? Array.from(raw.subarray(start),c=>String.fromCharCode(c)).join("") : new TextDecoder().decode(raw.subarray(start));
+        try{JSON.parse(text);return text;}catch{return "";}
+      }
     }
+    at=end+4;
+  }
+  return "";
+};
+/* PNG_WORKFLOW_END */
+const writePng = async (blobPromise, keepWorkflow=false) => {
+  if (!navigator.clipboard?.write || typeof ClipboardItem !== "function") throw new Error(clipWhy(new Error("no api")));
+  const pending=Promise.resolve(blobPromise).then(blob=>{
+    if(!blob)throw new Error(t("图没生成出来"));
+    return blob.type==="image/png" ? blob : blob.slice(0,blob.size,"image/png");
+  });
+  // 两种格式来自同一冻结快照；向 ComfyUI 粘贴时可用 JSON 恢复工作流。
+  const text=keepWorkflow ? pending.then(async blob=>new Blob([pngWorkflowText(new Uint8Array(await blob.arrayBuffer()))],{type:"text/plain"})) : null;
+  if(text)void text.catch(()=>{});
+  try{
+    await navigator.clipboard.write([new ClipboardItem({"image/png":pending,...(text?{"text/plain":text}:{})})]);
+  }catch(e){
+    try{
+      const blob=await pending;
+      await navigator.clipboard.write([new ClipboardItem({"image/png":blob,...(text?{"text/plain":await text}:{})})]);
+    }catch(e2){throw new Error(clipWhy(e2));}
   }
 };
 const drawCover = (ctx, img, dx, dy, dw, dh) => {
@@ -2418,12 +2814,20 @@ const blurPatch = (ctx, x, y, w, h, r) => {
   const sw = Math.max(1, Math.min(ctx.canvas.width - sx, Math.ceil(w)));
   const sh = Math.max(1, Math.min(ctx.canvas.height - sy, Math.ceil(h)));
   if (sw < 2 || sh < 2) return;
-  const tmp = document.createElement("canvas");
-  tmp.width = sw; tmp.height = sh;
-  const t = tmp.getContext("2d");
-  t.filter = `blur(${r || 16}px)`;
-  t.drawImage(ctx.canvas, sx, sy, sw, sh, 0, 0, sw, sh);
-  ctx.drawImage(tmp, sx, sy);
+  const radius=Math.max(.01,Number(r) || 16),pad=Math.ceil(radius*4)+2;
+  // Canvas 模糊会混入画布外的透明像素。复制边缘作为缓冲区，防止高强度时透出原图。
+  // 和后端裁剪区域后模糊的边界语义一致，不借用遮蔽区外的图像内容。
+  const padded=document.createElement("canvas");
+  padded.width=sw+pad*2;padded.height=sh+pad*2;
+  const p=padded.getContext("2d");
+  const xs=[[sx,1,0,pad],[sx,sw,pad,sw],[sx+sw-1,1,pad+sw,pad]];
+  const ys=[[sy,1,0,pad],[sy,sh,pad,sh],[sy+sh-1,1,pad+sh,pad]];
+  for(const [x,cw,dx,dw] of xs)for(const [y,ch,dy,dh] of ys)
+    p.drawImage(ctx.canvas,x,y,cw,ch,dx,dy,dw,dh);
+  const tmp=document.createElement("canvas");tmp.width=sw;tmp.height=sh;
+  const t=tmp.getContext("2d");t.filter=`blur(${radius}px)`;
+  t.drawImage(padded,-pad,-pad);
+  ctx.drawImage(tmp,sx,sy);
 };
 
 // 常用目录由用户钉选，保持范围下拉的内容稳定。
@@ -2461,7 +2865,59 @@ const baseName = (p) => {
 
 // 格子与大图的动作共用 ACTION_ORDER，按能力过滤后保持相对顺序。
 // 格子布局按最大动作集合估算，避免同屏条目采用不同的菜单形态。
-const CELL_ACTION_IDS = ["pick", "view", "lock", "fav", "shot", "meta", "wf", "trash"];
+// 拖动与窗口缩放共用边界约束，保留边距，避免触屏把把手拖出可操作范围。
+const clampPaintPanel=(x,y,w,h,vw,vh)=>({
+  x:Math.max(12,Math.min(x,Math.max(12,vw-w-12))),
+  y:Math.max(12,Math.min(y,Math.max(12,vh-h-12))),
+});
+// 固定四个候选点，按与图片的重叠面积选择空白位置；不搜索像素或反复改布局。
+const placePaintPanel=(vw,vh,image,pw,ph)=>{
+  const gap=16, usable=Math.max(24,vh-72);
+  const center=Math.max(12,(usable-ph)/2);
+  const candidates=[{x:image.right+gap,y:center},{x:image.left-pw-gap,y:center},
+    {x:vw-pw-12,y:60},{x:12,y:60}];
+  let best=null;
+  for(const candidate of candidates){
+    const p=clampPaintPanel(candidate.x,candidate.y,pw,ph,vw,usable);
+    const overlap=Math.max(0,Math.min(p.x+pw,image.right)-Math.max(p.x,image.left))*
+      Math.max(0,Math.min(p.y+ph,image.bottom)-Math.max(p.y,image.top));
+    if(!best || overlap<best.score)best={...p,score:overlap};
+  }
+  return {x:best.x,y:best.y};
+};
+const paintSideFits=(w,h,ratio)=>{
+  const imageWidth=Math.min(w-144,Math.max(0,h-150)*ratio);
+  return ratio>0 && ratio<.9 && h>=600 && (w-imageWidth)/2>=238;
+};
+// 对整个文档请求全屏，查看器与确认框挂在 body 下，不能只全屏某一个面板。
+let mbFullscreenExit=null, mbFullscreenTimer=0;
+const toggleBrowserFullscreen=async()=>{
+  try {
+    if(document.fullscreenElement) await document.exitFullscreen();
+    else if(document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen();
+    else notify(t("此浏览器不支持全屏"));
+  } catch(e) { notify(t("无法进入全屏，请检查浏览器权限")); }
+};
+const syncBrowserFullscreen=()=>{
+  const active=!!document.fullscreenElement;
+  document.querySelectorAll('[data-act="fullscreen"]').forEach(b=>{
+    b.title=t(active ? "退出全屏" : "浏览器全屏");
+    b.setAttribute("aria-pressed",String(active));
+  });
+  clearTimeout(mbFullscreenTimer);
+  mbFullscreenExit?.remove();mbFullscreenExit=null;
+  if(!active)return;
+  const el=document.createElement("div");el.className="mb-fs-exit reveal";
+  const button=mbElButton();button.textContent=t("退出全屏");button.onclick=()=>void toggleBrowserFullscreen();
+  el.appendChild(button);document.body.appendChild(el);mbFullscreenExit=el;
+  const reveal=()=>{el.classList.add("reveal");clearTimeout(mbFullscreenTimer);mbFullscreenTimer=setTimeout(()=>el.classList.remove("reveal"),2500);};
+  // 触屏点顶部热区先显示按钮，第二次明确点击退出；首次进入也短暂显示位置。
+  el.addEventListener("pointerdown",e=>{if(e.target===el){e.preventDefault();reveal();}});
+  el.addEventListener("pointerenter",reveal);el.addEventListener("pointermove",reveal);reveal();
+};
+document.addEventListener("fullscreenchange",syncBrowserFullscreen);
+
+const CELL_ACTION_IDS = ["pick", "view", "lock", "fav", "shot", "copyimage", "plain", "meta", "wf", "trash"];
 
 const ACTION_ORDER = [
   "pick",    // 用这张（主动作，永远第一）
@@ -2470,8 +2926,12 @@ const ACTION_ORDER = [
   "lock",    // 锁住这张
   "skip",    // 跳过河蟹（只有大图有）
   "redo",    // 重新检测（只有大图有）
+  "brush",   // 编辑紧邻识别，两个入口职责独立
   "fav",     // 收藏
   "shot",    // 截进剪贴板
+  "copyimage",
+  "plain",   // 复制纯图（不带工作流）
+  "rect",    // 框选打码（只有大图有：格子太小拖不准）
   "meta",    // 提示词和参数
   "wf",      // 打开工作流
   "trash",   // 移到回收站（破坏性，永远最后）
@@ -2693,7 +3153,7 @@ const PREF_KEYS = [
   REC_KEY, KINDS_KEY, SORT_KEY, PLACE_KEY, CENSOR_KEY, CENSOR_WAIT_KEY,
   CENSOR_THR_KEY, CENSOR_COVER_KEY, CENSOR_BLUR_KEY, CENSOR_CONCUR_KEY,
   "mediabrowser.size", "mediabrowser.masonry", "mediabrowser.boxsize", "mediabrowser.touch",
-  "mediabrowser.blur", "mediabrowser.fab.pos", THUMB_PX_KEY, MB_LANG_KEY,
+  "mediabrowser.fullBlur", "mediabrowser.blur", "mediabrowser.fab.pos", THUMB_PX_KEY, MB_LANG_KEY,
   CENSOR_LABELS_KEY, CENSOR_BREAST_COVER_KEY, THUMB_PER_CELL_KEY, CLICK_KEY,
 ];
 // 按**路径**存的单张标记。清「标记」时一起清。
@@ -2807,12 +3267,15 @@ async function openWorkflowFrom(path, root) {
 const VIEW_ZOOM_MIN = 1;
 const VIEW_ZOOM_MAX = 8;
 const VIEW_ZOOM_STEP = 1.12;
-const viewFileUrl = (path, root) => {
+const viewFileUrl = (path, root, t) => {
   const i = String(path || "").lastIndexOf("/");
   const sub = i < 0 ? "" : path.slice(0, i);
   const name = i < 0 ? path : path.slice(i + 1);
+  // mbv 只在覆盖原文件之后带：浏览器会把 /api/view 当同一 URL 缓存，
+  // 不换查询串就会把刚打好的马赛克显示成旧图。
   return `/api/view?filename=${encodeURIComponent(name)}` +
-         `&subfolder=${encodeURIComponent(sub)}&type=${encodeURIComponent(root)}`;
+         `&subfolder=${encodeURIComponent(sub)}&type=${encodeURIComponent(root)}` +
+         (t ? `&mbv=${encodeURIComponent(t)}` : "");
 };
 const viewIsStillImage = (path) => /\.(png|jpe?g|webp|gif|bmp)$/i.test(path || "");
 const viewNeighborImages = (list, idx, dir, count) => {
@@ -2848,6 +3311,12 @@ const viewZoomTranslate = (tx, ty, scale, next, cx, cy) => {
 };
 const viewCanPan = (scale) => scale > 1.02;
 const viewClickCloses = (scale, panned) => !viewCanPan(scale) && !panned;
+// 大图的 Delete 只删正在看的文件。焦点在输入框、文本域或可编辑区域时，
+// 这个键属于正在输入的内容，不能拿去删图。
+const viewKeyInField = (el) => {
+  const tag = el?.tagName;
+  return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || !!el?.isContentEditable;
+};
 const viewOrigReady = (src) => /\/api\/view\?/.test(src || "");
 const rememberDecoded = (map, url, im, cap) => {
   if (!map || !url || !im) return map;
@@ -2920,8 +3389,8 @@ const runViewPreload = async ({ paths, root, fetchFn, signal, onProgress }) => {
 
 function openViewer(list, startIdx, root, onPick, hooks = {}) {
   // hooks: { isFav, toggleFav, showMeta, getMode, setMode, isMarked, dimOf,
-  //          shotOne, ensureLocal, closePicker, trashOne, toggleMark, toggleSkip,
-  //          lockTitle }
+  //          shotOne, copyPlain, savePaint, fileVer, ensureLocal, closePicker,
+  //          trashOne, toggleMark, toggleSkip, lockTitle }
   // 宫格状态（收藏表、根目录、遮蔽）在外层，这里只接闭包，不复制一份。
   let idx = startIdx;
 
@@ -2930,31 +3399,50 @@ function openViewer(list, startIdx, root, onPick, hooks = {}) {
   lay.innerHTML =
     // ✕ 钉右上角，跟内容分开 —— 画幅占满时底部那排按钮可能被挤出视野，
     // 那时候如果只有底下一个关闭钮，就真出不去了
-    `<button type="button" class="mb-x" title="${escHtml(t("关闭（Esc、点画面外，或者再点一下图片）"))}">${mbIco("lucide--x")}</button>` +
+    `<button type="button" class="mb-x" title="${escHtml(t("关闭（Esc）"))}">${mbIco("lucide--x")}</button>` +
     `<button type="button" class="mb-nav prev" title="${escHtml(t("上一个（← 键）"))}">${mbIco("lucide--chevron-left")}</button>` +
     `<button type="button" class="mb-nav next" title="${escHtml(t("下一个（→ 键）"))}">${mbIco("lucide--chevron-right")}</button>` +
-    `<div class="mb-stage" title="${escHtml(t("滚轮放大缩小。放大后拖动画面。未放大时点图片关掉"))}"></div>` +
+    `<div class="mb-stage" title="${escHtml(t("滚轮缩放，放大后拖动查看"))}"></div>` +
     `<div class="bar">
        <span class="fn"></span>
        <span class="idx"></span>
        <span class="mb-seg mb-censor-seg">
-         <button type="button" data-censor="off" title="${escHtml(CENSOR_TITLE.off)}">${escHtml(t("原图"))}</button>
-         <button type="button" data-censor="full" title="${escHtml(CENSOR_TITLE.full)}">${escHtml(t("全幅"))}</button>
-         <button type="button" data-censor="local" title="${escHtml(CENSOR_TITLE.local)}">${escHtml(t("局部"))}</button>
+         <label><input type="checkbox" data-censor="local">${escHtml(t("显示遮蔽"))}</label>
+         <label><input type="checkbox" data-censor="full">${escHtml(t("整图模糊"))}</label>
        </span>
        <!-- 顺序 = ACTION_ORDER，跟格子那边逐个对齐。改这里请连同 ACTION_ORDER 一起改。 -->
        <button type="button" class="pick">${mbIco("lucide--check")} ${escHtml(t("用这张"))}</button>
-       <button type="button" class="act peek" title="${escHtml(t("临时看一眼（再点糊回去）。只影响这一次"))}">${mbIco("lucide--eye")}</button>
-       <button type="button" class="act lock" title="${escHtml(t("锁上：这张以后打开也是糊的（只管这一张）"))}">${mbIco("lucide--lock-open")}</button>
-       <button type="button" class="act skip" title="${escHtml(t("跳过河蟹：这一张不跑局部检测"))}">${mbIco("lucide--ban")}</button>
-       <button type="button" class="act redo" title="${escHtml(t("重新检测这一张：丢掉旧框，只打这一张"))}">${mbScanIco()}</button>
-       <button type="button" class="act tune" title="${escHtml(t("只调这一张的遮蔽：力度、部位、打码范围"))}">${mbIco("lucide--sliders-horizontal")}</button>
+       <button type="button" class="act peek" title="${escHtml(t("临时显示原图"))}">${mbIco("lucide--eye")}</button>
+       <button type="button" class="act lock" title="${escHtml(t("锁定整图模糊"))}">${mbIco("lucide--lock-open")}</button>
+       <button type="button" class="act skip" title="${escHtml(t("跳过自动检测"))}">${mbIco("lucide--ban")}</button>
+       <button type="button" class="act redo" title="${escHtml(t("智能打码当前图片"))}">${mbScanIco()}</button>
+       <button type="button" class="act brush" title="${escHtml(t("编辑遮蔽：笔刷"))}">${mbIco("lucide--paintbrush")}</button>
+       <button type="button" class="act tune" title="${escHtml(t("当前图片的遮蔽设置"))}">${mbIco("lucide--sliders-horizontal")}</button>
        <button type="button" class="act fav" title="${escHtml(t("收藏 / 取消收藏"))}">${mbIco("lucide--star")}</button>
-       <button type="button" class="act shot-one" title="${escHtml(t("截这张进剪贴板（按当前遮蔽）。局域网 IP 下会提示改用 127.0.0.1 或 https"))}">${mbIco("lucide--camera")}</button>
-       <button type="button" class="act meta" title="${escHtml(t("看提示词和参数，可一键复制"))}">${mbIco("lucide--info")}</button>
+       <button type="button" class="act shot-one" title="${escHtml(t("复制当前画面"))}">${mbIco("lucide--camera")}</button>
+       <button type="button" class="act copyimage" title="${escHtml(t("复制图片及工作流"))}">${mbIco("lucide--image-workflow")}</button>
+       <button type="button" class="act plain" title="${escHtml(t("复制图片"))}">${mbIco("lucide--image")}</button>
+       <button type="button" class="act meta" title="${escHtml(t("查看提示词和参数"))}">${mbIco("lucide--info")}</button>
        <button type="button" class="act wf" title="${escHtml(t("在新标签打开这个文件里存的工作流"))}">${mbIco("lucide--workflow")}</button>
-       <button type="button" class="act trash" title="${escHtml(t("移到回收站。会先问你一次；真的会从磁盘拿走"))}">${mbIco("lucide--trash-2")}</button>
+       <button type="button" class="act trash" title="${escHtml(t("移到回收站（Delete）"))}">${mbIco("lucide--trash-2")}</button>
        <button type="button" class="cls">${escHtml(t("关闭"))}</button>
+     </div>
+     <div class="bar mb-paint-bar">
+       <div class="mb-paint-head"><button type="button" class="mb-paint-grip" title="${escHtml(t("拖动工具面板"))}" aria-label="${escHtml(t("拖动工具面板"))}">⠿ ${escHtml(t("遮蔽工具"))}</button><button type="button" class="paint-close" title="${escHtml(t("关闭编辑工具"))}" aria-label="${escHtml(t("关闭编辑工具"))}">×</button></div>
+       <div class="mb-paint-tools"><button type="button" data-tool="select">${escHtml(t("选择"))}</button><button type="button" data-tool="rect">${escHtml(t("框选"))}</button><button type="button" data-tool="brush">${escHtml(t("笔刷"))}</button></div>
+       <span class="hint"></span>
+       <button type="button" class="delete-region">${escHtml(t("删除选区"))}</button>
+       <label class="lab">${escHtml(t("效果"))}<select class="paint-effect"><option value="blur">${escHtml(t("模糊"))}</option><option value="mosaic">${escHtml(t("马赛克"))}</option></select></label>
+       <label class="lab"><span class="block-label">${escHtml(t("强度"))}</span><input type="range" class="block" min="6" max="48" value="16"><b class="blockv">16</b></label>
+       <label class="lab brush-lab">${escHtml(t("笔刷"))}<input type="range" class="brush" min="8" max="120" value="30"><b class="brushv">3%</b></label>
+       <div class="mb-paint-history"><button type="button" class="undo">${escHtml(t("撤销"))}</button>
+       <button type="button" class="redo-paint">${escHtml(t("重做"))}</button><button type="button" class="go">${escHtml(t("完成"))}</button></div>
+       <details class="mb-tool-menu"><summary>${escHtml(t("更多"))}</summary><div class="mb-tool-options">
+         <button type="button" class="reset-position">${escHtml(t("恢复自动位置"))}</button>
+         <button type="button" class="clear-paint">${escHtml(t("清空遮蔽"))}</button>
+         <button type="button" class="reset-auto">${escHtml(t("清空并重新识别"))}</button>
+         <button type="button" class="cancel">${escHtml(t("放弃本次修改"))}</button>
+       </div></details>
      </div>`;
   document.body.appendChild(lay);
   applyCensorBlurCss();
@@ -2966,18 +3454,280 @@ function openViewer(list, startIdx, root, onPick, hooks = {}) {
   const decoded = new Map();
   const applyZoom = () => {
     const t = (z === 1 && !tx && !ty) ? "none" : `translate(${tx}px, ${ty}px) scale(${z})`;
-    for (const el of stage.querySelectorAll("img, .mb-censor-layer")) {
+    for (const el of stage.querySelectorAll("img:not(.mb-overlay-image), .mb-censor-layer")) {
       el.style.transform = t;
       el.style.transformOrigin = "center center";
     }
     stage.classList.toggle("zoomed", viewCanPan(z));
     stage.classList.toggle("panning", !!drag);
+    // 图层用归一化坐标保存；缩放平移后同步屏幕位置，不改变已有笔迹。
+    if (paintMode) redrawPaint();
   };
   const resetZoom = () => {
     z = 1; tx = 0; ty = 0; panned = false; drag = null;
     applyZoom();
   };
   const remember = (url, im) => rememberDecoded(decoded, url, im, 6);
+
+  // 编辑采用草稿事务；退出前不改变持久记录，更不会写回媒体文件。
+  let paintMode = "", paintOps = [], paintBusy = false, paintStroke = null, paintRect = null;
+  let paintSaving = false, paintPanHeld = false;
+  let paintBase = null, paintSuppressed = [], paintPast = [], paintFuture = [], paintSelected = -1;
+  let paintMove = null, paintOriginalMode = "off", paintSession = 0, paintPreviewSeq = 0;
+  let paintTimer = null, paintAbort = null, viewerRenderSeq = 0;
+  let paintRasterKey="",paintExact=null;
+  const paintBar = lay.querySelector(".mb-paint-bar");
+  const blockInp = paintBar.querySelector(".block");
+  const brushInp = paintBar.querySelector(".brush");
+  const effectInp = paintBar.querySelector(".paint-effect");
+  effectInp.value="blur";
+  const paintEffectNow=()=>effectInp.value==="mosaic" ? "mosaic" : "blur";
+  const paintStyle=()=>({effect:paintEffectNow(),block:paintBlockNow(),strength:Math.max(1,Math.min(80,+blockInp.value || 14))});
+  const paintCursor = document.createElement("div");
+  paintCursor.className = "mb-paint-dot"; paintCursor.hidden = true; lay.appendChild(paintCursor);
+  const paintBlockNow = () => paintClampBlock(blockInp.value);
+  const paintBrushNow = () => paintClampBrush((+brushInp.value) / 1000);
+  const paintState = () => overlayClone({ops:paintOps,suppressed:paintSuppressed});
+  const paintRemember = () => { paintPast.push(paintState()); if(paintPast.length>30)paintPast.shift(); paintFuture=[]; };
+  const paintRestore = (v) => { paintOps=v.ops; paintSuppressed=v.suppressed; paintSelected=-1; redrawPaint(); syncPaintBar(); };
+  const paintDirty = () => !!paintBase && JSON.stringify(paintState()) !== JSON.stringify({ops:paintBase.ops,suppressed:paintBase.suppressed || []});
+  const viewerSnapshot = () => {
+    const record=paintMode ? {...paintBase,ops:overlayClone(paintOps),suppressed:overlayClone(paintSuppressed)} : currentOverlay(root,list[idx],hooks.censorRule?.(list[idx]));
+    const flags=overlayFlags(hooks.getMode?.() || "off",hooks.getFullBlur?.(),hooks.isMarked?.(list[idx]),stage.classList.contains("peeking"));
+    if(!paintMode && flags.showOverlay && !record.exists && !hooks.isSkipDetect?.(list[idx]) && censorWaitBlurs() && !regionMem.get(regionKey(root,list[idx]))?.boxes)flags.fullBlur=true;
+    return {...record,...flags,root,filename:list[idx]};
+  };
+  const syncPaintBar = () => {
+    const blur=paintEffectNow()==="blur";
+    blockInp.min=blur ? "1" : "6";blockInp.max=blur ? "80" : "48";
+    paintBar.querySelector(".block-label").textContent=blur ? t("强度") : t("色块");
+    paintBar.querySelector(".blockv").textContent=String(blur ? paintStyle().strength : paintBlockNow());
+    paintBar.querySelector(".brushv").textContent=Math.round(paintBrushNow()*100)+"%";
+    paintBar.querySelector(".brush-lab").style.display=paintMode === "brush" ? "" : "none";
+    paintBar.querySelector(".go").disabled=paintBusy;
+    paintBar.querySelector(".cancel").disabled=paintSaving;
+    paintBar.querySelector(".paint-close").disabled=paintSaving;
+    paintBar.querySelector(".clear-paint").disabled=paintBusy;
+    paintBar.querySelector(".undo").disabled=!paintPast.length || paintBusy;
+    paintBar.querySelector(".redo-paint").disabled=!paintFuture.length || paintBusy;
+    paintBar.querySelector(".delete-region").disabled=paintSelected<0 || paintBusy;
+    paintBar.querySelector(".reset-auto").disabled=paintBusy || !hooks.detectForEdit;
+    paintBar.querySelector(".hint").textContent=t(paintMode === "select" ? "拖动选区，右下角调整大小" : paintMode === "brush" ? "涂抹需要遮蔽的区域" : "拖动框选需要遮蔽的区域");
+    paintBar.querySelectorAll("[data-tool]").forEach((el)=>el.classList.toggle("on",el.dataset.tool===paintMode));
+  };
+  const imgRect = () => stage.querySelector("img:not(.mb-overlay-image)")?.getBoundingClientRect() || null;
+  const paintLayerEl = () => {
+    let c=stage.querySelector(".mb-paint-layer");
+    if (!c) { c=document.createElement("canvas"); c.className="mb-paint-layer";stage.appendChild(c); }
+    return c;
+  };
+  const drawSelection = (ctx,w,h) => {
+    const op=paintOps[paintSelected]; if (!op || op.k!=="r") return;
+    ctx.save();ctx.strokeStyle="#e6c35c";ctx.lineWidth=Math.max(2,w/400);ctx.setLineDash([w/100,w/150]);
+    ctx.strokeRect(op.x*w,op.y*h,op.w*w,op.h*h);ctx.setLineDash([]);
+    ctx.fillStyle="#e6c35c";const d=w/60;ctx.fillRect((op.x+op.w)*w-d/2,(op.y+op.h)*h-d/2,d,d);ctx.restore();
+  };
+  const redrawPaint = () => {
+    if (!paintMode) return;
+    const img=stage.querySelector("img:not(.mb-overlay-image)"); if (!img?.naturalWidth) return;
+    const c=paintLayerEl(),r=img.getBoundingClientRect(),sr=stage.getBoundingClientRect();
+    // 预览使用受限像素尺寸；导出仍由后端按原图合成，避免大图每次移动都分配巨幅画布。
+    const scale=Math.min(1,1536/Math.max(img.naturalWidth,img.naturalHeight));
+    const width=Math.max(1,Math.round(img.naturalWidth*scale)),height=Math.max(1,Math.round(img.naturalHeight*scale));
+    const resized=c.width!==width || c.height!==height;
+    if(resized){c.width=width;c.height=height;paintRasterKey="";}
+    c.style.cssText=`left:${r.left-sr.left}px;top:${r.top-sr.top}px;width:${r.width}px;height:${r.height}px`;
+    const ctx=c.getContext("2d"), snapshot=viewerSnapshot();
+    const key=JSON.stringify([snapshot.sourceVersion,snapshot.ops,snapshot.showOverlay,snapshot.fullBlur,snapshot.peeking]);
+    const rasterKey=key+":"+paintSelected;
+    // 缩放、平移、拖动面板只更新 CSS 坐标，不重画像素或重复请求合成。
+    if(!paintRect && !paintStroke && !paintMove && paintRasterKey===rasterKey)return;
+    paintRasterKey="";
+    ctx.clearRect(0,0,c.width,c.height);
+    if(paintExact?.key===key)ctx.drawImage(paintExact.image,0,0,c.width,c.height);
+    else {
+      ctx.drawImage(img,0,0,c.width,c.height);
+      if(snapshot.showOverlay && !snapshot.peeking)for(const op of paintOps)paintDrawOp(ctx,{...op,strength:(op.strength || 14)*scale},c.width,c.height,Math.max(1,(op.block || paintBlockNow())*scale));
+    }
+    if (paintRect && !paintRectTooSmall(paintRect)) paintDrawOp(ctx,{...paintRect,...paintStyle(),strength:paintStyle().strength*scale},c.width,c.height,Math.max(1,paintBlockNow()*scale));
+    if (paintStroke?.pts.length) paintDrawOp(ctx,{...paintStrokeOp(paintStroke.pts,paintBrushNow()),...paintStyle(),strength:paintStyle().strength*scale},c.width,c.height,Math.max(1,paintBlockNow()*scale));
+    c.style.filter=paintExact?.key!==key && snapshot.fullBlur && !snapshot.peeking ? "blur(18px)" : "";
+    drawSelection(ctx,c.width,c.height);
+    const seq=++paintPreviewSeq;clearTimeout(paintTimer);
+    if (paintRect || paintStroke || paintMove || blockAdjusting || blockPointerHeld) return;
+    paintRasterKey=rasterKey;
+    if(paintExact?.key===key)return;
+    paintTimer=setTimeout(async()=>{
+      try {
+        const url=await overlayPreview(root,list[idx],snapshot);
+        if (!paintMode || seq!==paintPreviewSeq || !lay.isConnected) return;
+        const exact=new Image();exact.onload=()=>{
+          if (!paintMode || seq!==paintPreviewSeq || !lay.isConnected) return;
+          paintExact={key,image:exact};
+          c.style.filter="";ctx.clearRect(0,0,c.width,c.height);ctx.drawImage(exact,0,0,c.width,c.height);drawSelection(ctx,c.width,c.height);
+        };exact.src=url;
+      } catch(e) { if (seq===paintPreviewSeq && lay.isConnected) notify(e.message); }
+    },120);
+  };
+  const stopPaint = (keep) => {
+    ++paintSession;++paintPreviewSeq;clearTimeout(paintTimer);paintAbort?.abort();
+    paintPanHeld=false;lay.classList.remove("paint-pan");
+    paintRasterKey="";paintExact=null;blockAdjusting=false;blockPointerHeld=false;
+    paintMode="";paintOps=[];paintStroke=null;paintRect=null;paintMove=null;paintBusy=false;paintSaving=false;
+    paintCursor.hidden=true;lay.classList.remove("painting","paint-brush","paint-side");
+    stage.querySelector(".mb-paint-layer")?.remove();
+    if (!keep) hooks.setMode?.(paintOriginalMode);
+    paintBase=null;syncViewerCensor();syncActs();
+  };
+  const startPaint = async (mode) => {
+    if (paintBusy) return;
+    const path=list[idx];if (!canPaintFile(path) || !stage.querySelector("img:not(.mb-overlay-image)")) {notify(t("只能给静图打码"));return;}
+    if (!paintMode) {
+      const session=++paintSession;
+      try {
+        // 查看器打开时已刷新记录；编辑复用缓存，保存仍由版本号防止并发覆盖。
+        await loadOverlay(root,path);
+        if (!lay.isConnected || list[idx]!==path || session!==paintSession) return;
+        paintBase=currentOverlay(root,path,hooks.censorRule?.(path));
+        paintOps=overlayClone(paintBase.ops);paintSuppressed=overlayClone(paintBase.suppressed || []);
+        paintPast=[];paintFuture=[];paintSelected=-1;paintOriginalMode=hooks.getMode?.() || "off";
+        const visible=stage.querySelector(".mb-overlay-image");
+        const flags=viewerSnapshot();
+        if(visible?.complete && visible.naturalWidth && flags.showOverlay && !flags.peeking){
+          paintExact={image:visible,key:JSON.stringify([paintBase.sourceVersion,paintOps,true,flags.fullBlur,false])};
+        }
+        if(hooks.getMode?.()!=="local")hooks.setMode?.("local");
+        syncViewerCensor(false);stage.classList.remove("peeking");
+        ++viewerRenderSeq;
+      } catch(e) {notify(e.message);return;}
+    }
+    paintMode=mode;paintStroke=null;paintRect=null;
+    lay.classList.add("painting");lay.classList.toggle("paint-brush",mode==="brush");syncPaintBar();
+    syncPaintPlacement();redrawPaint();
+  };
+  const commitPaint = async () => {
+    if (!paintBase || paintBusy) return false;
+    const path=list[idx],session=paintSession;
+    paintBusy=true;paintSaving=true;syncPaintBar();paintAbort=new AbortController();
+    try {
+      await hooks.savePaint(path,{...paintBase,...paintState()},paintAbort.signal);
+      if (!lay.isConnected || list[idx]!==path || session!==paintSession) return false;
+      stopPaint(true);notify(t("遮蔽已保存"));return true;
+    } catch(e) { if (e.name!=="AbortError" && lay.isConnected) notify(e.message || t("修改未保存，请重试"));return false; }
+    finally { if (session===paintSession) {paintBusy=false;paintSaving=false;if (paintMode) syncPaintBar();} }
+  };
+  const leavePaint = async () => {
+    if (!paintMode) return true;
+    if (paintSaving) return false;
+    if (paintBusy) {paintAbort?.abort();paintBusy=false;}
+    if (!paintDirty()) {stopPaint(false);return true;}
+    const choice=await overlayLeaveChoice();
+    if (choice==="save") return commitPaint();
+    if (choice==="discard") {stopPaint(false);return true;}
+    return false;
+  };
+  paintBar.querySelector(".undo").onclick=()=>{if (paintPast.length) {paintFuture.push(paintState());paintRestore(paintPast.pop());}};
+  paintBar.querySelector(".redo-paint").onclick=()=>{if (paintFuture.length) {paintPast.push(paintState());paintRestore(paintFuture.pop());}};
+  paintBar.querySelector(".clear-paint").onclick=()=>{paintRemember();paintSuppressed.push(...paintOps.filter(o=>o.auto).map(o=>({...overlayClone(o),id:overlayId()})));paintOps=[];paintSelected=-1;redrawPaint();syncPaintBar();};
+  const detectPaint=async(reset)=>{
+    if(paintBusy || !hooks.detectForEdit)return;
+    const session=paintSession,path=list[idx];paintBusy=true;paintAbort=new AbortController();syncPaintBar();
+    try{
+      const rec=await hooks.detectForEdit(path,paintAbort.signal);
+      if(!paintMode || session!==paintSession || list[idx]!==path || !lay.isConnected)return;
+      // 完全重来仍只操作草稿，撤销或取消能找回原来的手工结果。
+      paintRemember();
+      const detected=detectedOps(rec.boxes,hooks.censorRule?.(path));
+      // 智能识别与手工绘制共享撤销历史；普通识别保留手工修订，只有明确重来才清空。
+      const next=reset ? {ops:detected,suppressed:[]} : overlayMerge({ops:paintOps,suppressed:paintSuppressed},detected,true);
+      paintOps=next.ops;paintSuppressed=next.suppressed;paintSelected=-1;redrawPaint();
+    }catch(e){if(e.name!=="AbortError" && lay.isConnected)notify(e.message);}
+    finally{if(session===paintSession){paintBusy=false;syncPaintBar();}}
+  };
+  paintBar.querySelector(".reset-auto").onclick=()=>detectPaint(true);
+  const protectAuto=(op)=>{if(op?.auto){paintSuppressed.push({...overlayClone(op),id:overlayId()});op.auto=false;op.id=overlayId();}};
+  paintBar.querySelector(".delete-region").onclick=()=>{if(paintSelected<0)return;paintRemember();protectAuto(paintOps[paintSelected]);paintOps.splice(paintSelected,1);paintSelected=-1;redrawPaint();syncPaintBar();};
+  paintBar.querySelectorAll("[data-tool]").forEach(b=>{b.onclick=()=>{if(!paintBusy)void startPaint(b.dataset.tool);};});
+  paintBar.querySelector(".go").onclick=()=>void commitPaint();
+  // 关闭只收起编辑工具；有修改时沿用保存/放弃/继续的事务，不直接丢弃。
+  paintBar.querySelector(".paint-close").onclick=()=>void leavePaint();
+  paintBar.querySelector(".cancel").onclick=()=>{if(!paintSaving)stopPaint(false);};
+  let blockAdjusting=false,blockPointerHeld=false;
+  blockInp.onpointerdown=(event)=>{
+    blockPointerHeld=true;
+    // 拖动期间只展示本地预览，旧的精确预览即使晚到也不能插入画面。
+    ++paintPreviewSeq;clearTimeout(paintTimer);
+    try{blockInp.setPointerCapture(event.pointerId);}catch{}
+  };
+  blockInp.oninput=()=>{
+    if(paintBusy)return;
+    const style=paintStyle(), field=style.effect==="blur" ? "strength" : "block";
+    // 无选区时只调整同类效果，选中后可精调自动或手工区域。
+    const targets=paintOps.filter((op,i)=>(paintSelected<0 || i===paintSelected) && (op.effect || "mosaic")===style.effect && op[field]!==style[field]);
+    if(targets.length){
+      if(!blockAdjusting){paintRemember();blockAdjusting=true;}
+      for(const op of targets){protectAuto(op);op[field]=style[field];}
+      redrawPaint();
+    }
+    syncPaintBar();
+  };
+  const finishBlockAdjust=()=>{
+    if(!blockAdjusting && !blockPointerHeld)return;
+    blockAdjusting=false;blockPointerHeld=false;
+    // 几何缓存不能吞掉松手后的最终合成；一次手势只在这里恢复精确预览。
+    paintRasterKey="";redrawPaint();
+  };
+  blockInp.onchange=()=>{if(!blockPointerHeld)finishBlockAdjust();};
+  blockInp.onpointerup=blockInp.onpointercancel=blockInp.onlostpointercapture=blockInp.onblur=finishBlockAdjust;
+  effectInp.onchange=()=>{
+    if(paintBusy)return;
+    blockAdjusting=false;
+    const style=paintStyle();
+    const targets=paintOps.filter((op,i)=>(paintSelected<0 || i===paintSelected) && (op.effect || "mosaic")!==style.effect);
+    // 切换效果保留区域形状，并阻止后续自动识别覆盖人工调整。
+    if(targets.length){paintRemember();for(const op of targets){protectAuto(op);Object.assign(op,style);}redrawPaint();}
+    syncPaintBar();
+  };
+  brushInp.oninput=()=>syncPaintBar();
+  const paintAt=(e)=>paintNormFromClient(e.clientX,e.clientY,imgRect());
+  const movePaintCursor=(e)=>{
+    if(paintMode!=="brush"){paintCursor.hidden=true;return;}
+    const r=imgRect(),p=paintAt(e);if(!r||!p||p.outside){paintCursor.hidden=true;return;}
+    const size=paintBrushNow()*Math.min(r.width,r.height)*2;paintCursor.hidden=false;
+    paintCursor.style.cssText=`width:${size}px;height:${size}px;left:${e.clientX}px;top:${e.clientY}px`;
+  };
+  const beginPaintDrag=(e)=>{
+    if(!paintMode||paintBusy)return;
+    // 空格左键与中键交给平移监听；普通左键继续绘制，右键不落笔。
+    if(drag || paintPanHeld || (e.button != null && e.button !== 0))return;const p=paintAt(e);if(!p||p.outside)return;
+    e.preventDefault();e.stopImmediatePropagation();try{stage.setPointerCapture(e.pointerId);}catch{}
+    if(paintMode==="select"){
+      paintSelected=paintOps.findLastIndex(op=>op.k==="r" ? p.x>=op.x&&p.x<=op.x+op.w+.015&&p.y>=op.y&&p.y<=op.y+op.h+.015 : op.pts.some(q=>Math.hypot(q[0]-p.x,q[1]-p.y)<op.r));
+      const op=paintOps[paintSelected];if(op){effectInp.value=op.effect || "mosaic";blockInp.value=String(op.effect==="blur" ? op.strength || 14 : op.block || 16);}
+      if(op?.k==="r") {paintMove={p,op:overlayClone(op),started:false,resize:Math.abs(p.x-op.x-op.w)<.025&&Math.abs(p.y-op.y-op.h)<.025};}
+    } else if(paintMode==="rect")paintRect={k:"r",x:p.x,y:p.y,w:0,h:0,x0:p.x,y0:p.y};
+    else paintStroke={pts:[{x:p.x,y:p.y}]};
+    redrawPaint();syncPaintBar();
+  };
+  const movePaintDrag=(e)=>{
+    if(!paintMode || drag)return;movePaintCursor(e);const p=paintAt(e);if(!p)return;
+    if(paintMove){const o=paintMove.op,n=paintOps[paintSelected];
+      if(!paintMove.started){
+        if(Math.abs(p.x-paintMove.p.x)+Math.abs(p.y-paintMove.p.y)<.002)return;
+        paintRemember();protectAuto(n);paintMove.started=true;
+      }
+      if(paintMove.resize){n.w=Math.max(.004,Math.min(1-o.x,p.x-o.x));n.h=Math.max(.004,Math.min(1-o.y,p.y-o.y));}
+      else {n.x=Math.max(0,Math.min(1-o.w,o.x+p.x-paintMove.p.x));n.y=Math.max(0,Math.min(1-o.h,o.y+p.y-paintMove.p.y));}
+      redrawPaint();
+    }else if(paintRect){paintRect={...paintRect,...paintNormRect({x:paintRect.x0,y:paintRect.y0},p)};redrawPaint();}
+    else if(paintStroke){paintStroke.pts=paintAppendDot(paintStroke.pts,p,.002);redrawPaint();}
+  };
+  const endPaintDrag=()=>{
+    if(drag)return;
+    if(paintRect){const {x,y,w,h}=paintRect;paintRect=null;if(!paintRectTooSmall({w,h})){paintRemember();paintOps.push({id:overlayId(),k:"r",x,y,w,h,...paintStyle()});}}
+    else if(paintStroke){paintRemember();paintOps.push({id:overlayId(),...paintStrokeOp(paintStroke.pts,paintBrushNow()),...paintStyle()});paintStroke=null;}
+    paintMove=null;redrawPaint();syncPaintBar();
+  };
 
   // 三个动作按钮：状态随翻页刷新（换了一个文件，收藏与否/有没有工作流都变了）
   const favBtnV = lay.querySelector(".fav");
@@ -3005,8 +3755,8 @@ function openViewer(list, startIdx, root, onPick, hooks = {}) {
     setIco(lockBtn, locked ? "lucide--lock" : "lucide--lock-open");
     lockBtn.classList.toggle("on", locked);
     lockBtn.title = hooks.lockTitle?.(locked) ?? (locked
-      ? t("已锁：这张以后打开都是糊的。点一下解锁")
-      : t("锁上：这张以后打开也是糊的（只管这一张）"));
+      ? t("解除整图模糊锁定")
+      : t("锁定整图模糊"));
     lockBtn.style.display = canHexie && hooks.toggleMark ? "" : "none";
     const skipBtn = lay.querySelector(".skip");
     skipBtn.style.display = canHexie && hooks.toggleSkip ? "" : "none";
@@ -3016,14 +3766,17 @@ function openViewer(list, startIdx, root, onPick, hooks = {}) {
     const tuneBtn = lay.querySelector(".act.tune");
     // 没有 openCensor 这个钩子（比如以后有别的地方复用查看器）就不显示，别给个点不动的钮
     tuneBtn.style.display = canHexie && hooks.openCensor ? "" : "none";
+    const paintOk = canPaintFile(path) && !!hooks.savePaint;
+    lay.querySelector(".shot-one").style.display = kindOf(path) === "video" ? "" : "none";
+    lay.querySelector(".act.brush").style.display = paintOk ? "" : "none";
   };
   const viewerCanPeek = () => {
     const mode = hooks.getMode?.() ?? "off";
     const path = list[idx];
-    if (mode === "full" || hooks.isMarked?.(path)) return true;
+    if (hooks.getFullBlur?.() || mode === "full" || hooks.isMarked?.(path)) return true;
     if (mode === "local" && !hooks.isSkipDetect?.(path)) {
       const rec = regionMem.get(regionKey(root, path));
-      return filterClientBoxes(rec?.boxes).length > 0;
+      return (paintMode ? paintOps : currentOverlay(root,path,hooks.censorRule?.(path)).ops).length > 0;
     }
     return false;
   };
@@ -3032,63 +3785,41 @@ function openViewer(list, startIdx, root, onPick, hooks = {}) {
   const syncViewerCensor = (paint = true) => {
     const mode = hooks.getMode?.() ?? "off";
     lay.querySelectorAll("[data-censor]").forEach((b) => {
-      b.classList.toggle("on", b.dataset.censor === mode);
+      b.checked=b.dataset.censor === "full" ? !!hooks.getFullBlur?.() : mode === "local";
     });
     if (paint) applyViewerCensor();
   };
   const applyViewerCensor = () => {
-    const media = stage.querySelector("img, video");
-    const img = stage.querySelector("img");
-    const mode = hooks.getMode?.() ?? "off";
-    const path = list[idx];
-    stage.querySelector(".mb-censor-layer")?.remove();
-    if (media) media.style.filter = "";
-    if (mode === "full" || hooks.isMarked?.(path)) {
-      if (media && !stage.classList.contains("peeking")) media.style.filter = "blur(18px)";
-      applyZoom();
-      return;
-    }
-    if (mode === "local" && img && !stage.classList.contains("peeking") && !hooks.isSkipDetect?.(path)) {
-      const rec = regionMem.get(regionKey(root, path));
-      paintCensorOverlay(stage, rec?.boxes, hooks.dimOf?.(path), true, hooks.censorRule?.(path));
+    if (paintMode) {redrawPaint();return;}
+    const media=stage.querySelector("img:not(.mb-overlay-image), video");
+    const path=list[idx], seq=++viewerRenderSeq;
+    stage._overlaySeq=(stage._overlaySeq || 0)+1;stage.querySelector(".mb-censor-layer")?.remove();
+    if(media) media.style.filter="";
+    const snapshot=viewerSnapshot();
+    if(snapshot.peeking) {applyZoom();return;}
+    if(snapshot.fullBlur && media) media.style.filter="blur(18px)";
+    if(!canPaintFile(path) && snapshot.showOverlay) paintCensorOverlay(stage,null,hooks.dimOf?.(path),true,hooks.censorRule?.(path),root,path,snapshot);
+    if(canPaintFile(path) && (snapshot.showOverlay || snapshot.fullBlur)) {
+      void loadOverlay(root,path).then(()=>{
+        if(!lay.isConnected || seq!==viewerRenderSeq || paintMode || list[idx]!==path)return;
+        const snap=viewerSnapshot();
+        paintCensorOverlay(stage,null,hooks.dimOf?.(path),true,hooks.censorRule?.(path),root,path,snap);
+        applyZoom();
+      }).catch(e=>{if(lay.isConnected && seq===viewerRenderSeq)notify(e.message);});
     }
     applyZoom();
   };
-  lay.querySelectorAll("[data-censor]").forEach((b) => {
-    b.onclick = async () => {
-      const m = b.dataset.censor;
-      const already = hooks.getMode?.() === m;
-      if (!(m === "local" && already)) hooks.setMode?.(m);
-      syncViewerCensor();
-      syncActs();
-      if (m !== "local") return;
-      const rec = await hooks.ensureLocal?.(list[idx], already);
-      if (!lay.isConnected || !rec) return;
-      if (rec.reason === "skipped") {
-        notify(t("这张已跳过河蟹，不会检测。要检测点重新检测"));
-        return;
-      }
-      if (rec.reason === "failed") {
-        notify(t("这张检测没完成，再点一次「局部」"));
-        return;
-      }
-      if (rec?.reason === "no_backend") {
-        notify(t("局部接口是 404：必须关掉 Comfy 的 Python 窗口再启动，只刷新网页不够"));
-        return;
-      }
-      if (rec?.reason === "no_runtime") {
-        notify(t("还没装检测运行时。关掉预览，打开右上角设置，在 Comfy 的 Python 里装 onnxruntime"));
-        return;
-      }
-      if (rec?.reason === "no_weights") {
-        notify(t("还没有检测模型。关掉预览，打开右上角设置下载或指定本机文件"));
-        return;
-      }
-      applyViewerCensor();
-      syncActs();
-      if (!filterClientBoxes(rec?.boxes).length) {
-        notify(t("这张没有要遮的部位（或分数低于阈值）"));
-      }
+  const onOverlaySaved=(e)=>{
+    if(e.detail.root!==root || e.detail.path!==list[idx])return;
+    if(paintMode){if(!paintBusy)notify(t("遮蔽已在其他窗口更新，请取消后重新编辑"));return;}
+    applyViewerCensor();syncActs();
+  };
+  overlayEvents.addEventListener("saved",onOverlaySaved);
+  lay.querySelectorAll("[data-censor]").forEach(b=>{
+    b.onclick=()=>{
+      if(b.dataset.censor==="full")hooks.setFullBlur?.(b.checked);
+      else hooks.setMode?.(b.checked?"local":"off");
+      syncViewerCensor();syncActs();
     };
   });
   lay.querySelector(".lock").onclick = () => {
@@ -3132,36 +3863,68 @@ function openViewer(list, startIdx, root, onPick, hooks = {}) {
     });
   };
   lay.querySelector(".redo").onclick = async () => {
-    const rec = await hooks.ensureLocal?.(list[idx], true);
-    if (!lay.isConnected || !rec) return;
+    const path=list[idx];
+    // 浏览时直接识别并保存图层；只有正在编辑时才合入草稿，避免两个入口都打开编辑器。
+    if(paintBusy)return;
+    if(paintMode){await detectPaint(false);return;}
+    // 检测期间不允许打开另一个编辑事务；翻页或关闭后不更新旧图界面。
+    paintBusy=true;
+    let rec;
+    try{rec=await hooks.ensureLocal?.(path,true);}
+    catch(e){if(lay.isConnected && list[idx]===path)notify(e.message);return;}
+    finally{paintBusy=false;}
+
+    if (!lay.isConnected || list[idx]!==path || !rec) return;
+    if(!Array.isArray(rec.boxes)){notify(t("检测未完成，请重试智能打码"));return;}
+    syncViewerCensor(false);
     applyViewerCensor();
     syncActs();
     const n = filterClientBoxes(rec.boxes).length;
     if (hooks.getMode?.() !== "local") {
-      notify(n ? t("已重新检测。切到「局部」才能看到框") : t("重新检测过了，这张没有要遮的部位"));
+      notify(n ? t("智能打码完成") : t("重新检测过了，这张没有要遮的部位"));
     } else {
       notify(n ? t("已重新检测这一张") : t("重新检测过了，这张没有要遮的部位"));
     }
   };
-  lay.querySelector(".shot-one").onclick = () => hooks.shotOne?.(list[idx]);
-  lay.querySelector(".trash").onclick = async () => {
+  lay.querySelector(".shot-one").onclick = () => hooks.shotOne?.(list[idx], viewerSnapshot());
+  lay.querySelector(".plain").onclick = () => hooks.copyPlain?.(list[idx], viewerSnapshot());
+  lay.querySelector(".copyimage").onclick = () => hooks.copyImage?.(list[idx], viewerSnapshot());
+  // 更多菜单执行后收起，避免遮挡编辑画面。
+  lay.querySelectorAll(".mb-tool-options button").forEach(button => button.addEventListener("click", () => { if(!lay.classList.contains("paint-roomy")) button.closest("details").open=false; }));
+  lay.querySelector(".brush").onclick = () => startPaint("brush");
+  // 大图里点删除、按 Delete 都不再弹确认：人已经在看这一张，再问一次只会打断连删。
+  // 格子菜单和批量删除仍走 confirmTrash。这里只锁住「正在删的这一张」，
+  // 避免请求还没回来时连点或按键连发把同一路径送两次；翻到别的张仍可接着删。
+  let trashing = "";
+  const trashViewing = async () => {
+    if (!(await leavePaint())) return;
     const path = list[idx];
-    if (!await confirmTrash(path)) return;
     if (!hooks.trashOne) {
       notify(t("这个预览没有删除入口"));
       return;
     }
+    if (trashing === path) return;
+    trashing = path;
     try {
       await hooks.trashOne(path);
+      if (!lay.isConnected || list[idx] !== path) {
+        const at = list.indexOf(path);
+        if (at >= 0) list.splice(at, 1);
+        return;
+      }
       list.splice(idx, 1);
       if (!list.length) { shut(); return; }
       if (idx >= list.length) idx = list.length - 1;
       show();
     } catch (e) {
       notify(t(e.message || "没能移到回收站"));
+    } finally {
+      if (trashing === path) trashing = "";
     }
   };
+  lay.querySelector(".trash").onclick = () => { void trashViewing(); };
   wfBtnV.onclick = async () => {
+    if (!(await leavePaint())) return;
     setIco(wfBtnV, "lucide--loader-circle", "spin");
     try {
       const res = await openWorkflowFrom(list[idx], root);
@@ -3177,9 +3940,12 @@ function openViewer(list, startIdx, root, onPick, hooks = {}) {
 
   const show = () => {
     const path = list[idx];
+    if(canPaintFile(path)) void loadOverlay(root,path,true).then(rec=>{
+      if(lay.isConnected && list[idx]===path && !paintMode){if(rec.stale)notify(t("图片已更新，旧遮蔽未应用"));applyViewerCensor();}
+    }).catch(e=>{if(lay.isConnected && list[idx]===path)notify(e.message);});
     const i = path.lastIndexOf("/");
     const name = i < 0 ? path : path.slice(i + 1);
-    const url = viewFileUrl(path, root);
+    const url = viewFileUrl(path, root, hooks.fileVer?.(path));
     const kind = kindOf(path);                   // image / video / audio / other
     const isVid = kind === "video";
     resetZoom();
@@ -3236,7 +4002,7 @@ function openViewer(list, startIdx, root, onPick, hooks = {}) {
       im.draggable = false;
       if (im.parentNode !== stage) stage.appendChild(im);
       for (const n of [...stage.children]) {
-        if (n !== im && !n.classList.contains("mb-censor-layer")) n.remove();
+        if (n !== im && !n.classList.contains("mb-censor-layer") && !n.classList.contains("mb-paint-layer")) n.remove();
       }
       applyViewerCensor();
       applyZoom();
@@ -3263,18 +4029,19 @@ function openViewer(list, startIdx, root, onPick, hooks = {}) {
       tIm.decoding = "sync";
       tIm.onload = () => {
         if (!lay.isConnected || list[idx] !== path) return;
-        const cur = stage.querySelector("img");
+        const cur = stage.querySelector("img:not(.mb-overlay-image)");
         if (viewOrigReady(cur?.currentSrc || cur?.src)) return;
         adopt(tIm, false);
       };
       tIm.src = thumb;
-      if (!stage.querySelector("img") && tIm.complete && tIm.naturalWidth) adopt(tIm, false);
+      if (!stage.querySelector("img:not(.mb-overlay-image)") && tIm.complete && tIm.naturalWidth) adopt(tIm, false);
     }
     orig.src = url;
     if (orig.complete && orig.naturalWidth) adopt(orig, true);
   };
 
-  const go = (d) => {
+  const go = async (d) => {
+    if (!await leavePaint()) return;
     const n = idx + d;
     if (n < 0 || n >= list.length) return;
     lastDir = d;
@@ -3287,7 +4054,7 @@ function openViewer(list, startIdx, root, onPick, hooks = {}) {
   const prefetch = () => {
     for (const n of viewPrefetchPlan(list, idx, lastDir)) {
       const path = list[n];
-      const u = viewFileUrl(path, root);
+      const u = viewFileUrl(path, root, hooks.fileVer?.(path));
       const hit = decoded.get(u);
       if (hit?.complete && hit.naturalWidth) continue;
       const im = new Image();
@@ -3298,42 +4065,147 @@ function openViewer(list, startIdx, root, onPick, hooks = {}) {
     }
   };
 
-  const shut = () => {
+  let paintPanelPosition=null,paintPanelDrag=null;
+  const paintGrip=paintBar.querySelector(".mb-paint-grip");
+  const placeManualPanel=()=>{
+    if(!paintPanelPosition || !paintMode)return;
+    lay.classList.add("paint-manual");
+    lay.classList.toggle("paint-side",paintPanelPosition.side);
+    paintBar.style.width=paintPanelPosition.width+"px";
+    const r=paintBar.getBoundingClientRect();
+    const pos=clampPaintPanel(paintPanelPosition.x,paintPanelPosition.y,r.width,r.height,lay.clientWidth,lay.clientHeight);
+    Object.assign(paintPanelPosition,pos);
+    paintBar.style.left=pos.x+"px";paintBar.style.top=pos.y+"px";
+  };
+  paintGrip.onpointerdown=(e)=>{
+    if(e.button!==0 || !paintMode)return;
+    e.preventDefault();e.stopPropagation();
+    const r=paintBar.getBoundingClientRect();
+    paintPanelPosition={x:r.left,y:r.top,width:r.width,side:lay.classList.contains("paint-side")};
+    paintPanelDrag={id:e.pointerId,x:e.clientX,y:e.clientY,left:r.left,top:r.top};
+    // 捕获指针后，手指离开把手仍能继续拖动，且不会开始图片上的绘制。
+    paintGrip.setPointerCapture(e.pointerId);placeManualPanel();
+  };
+  paintGrip.onpointermove=(e)=>{
+    if(!paintPanelDrag || e.pointerId!==paintPanelDrag.id)return;
+    e.preventDefault();
+    paintPanelPosition.x=paintPanelDrag.left+e.clientX-paintPanelDrag.x;
+    paintPanelPosition.y=paintPanelDrag.top+e.clientY-paintPanelDrag.y;
+    placeManualPanel();
+  };
+  const endPanelDrag=(e)=>{
+    if(paintPanelDrag?.id!==e.pointerId)return;
+    paintPanelDrag=null;
+    if(paintGrip.hasPointerCapture(e.pointerId))paintGrip.releasePointerCapture(e.pointerId);
+  };
+  paintGrip.onpointerup=endPanelDrag;paintGrip.onpointercancel=endPanelDrag;
+  paintGrip.onlostpointercapture=()=>{paintPanelDrag=null;};
+  paintBar.querySelector(".reset-position").onclick=()=>{
+    paintPanelDrag=null;paintPanelPosition=null;lay.classList.remove("paint-manual");
+    paintBar.style.width="";paintBar.style.left="";paintBar.style.top="";syncPaintPlacement();
+  };
+  const syncPaintPlacement=()=>{
+    if(!paintMode){applyViewerCensor();return;}
+    const w=lay.clientWidth,h=lay.clientHeight;
+    const roomy=w>=480 && h>=650;
+    const wasRoomy=lay.classList.contains("paint-roomy");
+    lay.classList.toggle("paint-roomy",roomy);
+    const more=paintBar.querySelector("details");
+    if(roomy || wasRoomy!==roomy)more.open=roomy;
+    if(paintPanelPosition)placeManualPanel();
+    else {
+      const im=stage.querySelector("img:not(.mb-overlay-image)");
+      const rect=im?.getBoundingClientRect();
+      if(!rect)return;
+      paintBar.style.width=Math.min(340,Math.max(280,w*.21))+"px";
+      const panel=paintBar.getBoundingClientRect();
+      const pos=placePaintPanel(w,h,rect,panel.width,panel.height);
+      paintBar.style.left=pos.x+"px";paintBar.style.top=pos.y+"px";
+    }
+    redrawPaint();
+  };
+  // 延至下一帧变更布局，避免在尺寸观察回调中同步写布局触发循环通知。
+  let paintLayoutFrame=0;
+  const paintLayoutObserver=new ResizeObserver(()=>{
+    cancelAnimationFrame(paintLayoutFrame);
+    paintLayoutFrame=requestAnimationFrame(()=>{if(lay.isConnected)syncPaintPlacement();});
+  });
+  paintLayoutObserver.observe(stage);
+  paintLayoutObserver.observe(lay);
+  paintLayoutObserver.observe(paintBar);
+  const shut = async () => {
+    if (!await leavePaint()) return false;
+    paintLayoutObserver.disconnect();cancelAnimationFrame(paintLayoutFrame);
+    document.removeEventListener("keyup",onPanKeyUp,true);window.removeEventListener("blur",onViewerBlur);
+    ++paintSession; ++viewerRenderSeq; clearTimeout(paintTimer); paintAbort?.abort();
+    overlayEvents.removeEventListener("saved", onOverlaySaved);
     stage.querySelector("video, audio")?.pause();
+    paintCursor.remove();
     lay.remove();
     document.removeEventListener("keydown", onKey, true);
     mbLayers.drop(shut);
+    return true;
   };
   // ⚠️ 登记必须在 shut **声明之后**：写在上面 appendChild(lay) 那儿会撞 TDZ。
   //    症状还特别阴 —— 元素已经进 DOM 了，所以「大图打开了」，但后面的接线全没跑，
   //    看着像开着，其实是个壳。实测踩过（同一个坑在浏览窗口那边也踩了一次）。
   mbLayers.push(shut);
   const onKey = (e) => {
+    // 全屏期间的 Escape 留给浏览器，避免退出全屏时同时丢弃草稿。
+    if (e.key === "Escape" && document.fullscreenElement) return;
     if (document.querySelector(".mb-confirm")) return;
+    if (paintMode) {
+      if (e.code === "Space" && !viewKeyInField(e.target)) {
+        e.preventDefault();e.stopImmediatePropagation();paintPanHeld=true;
+        paintCursor.hidden=true;lay.classList.add("paint-pan");return;
+      }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        if (!paintSaving) stopPaint(false);
+      }
+      return;
+    }
     if (e.key === "Escape") { e.preventDefault(); e.stopImmediatePropagation(); shut(); }
     // 视频在播时方向键归播放器管（快进快退），别抢
     else if (e.key === "ArrowLeft" && e.target.tagName !== "VIDEO") { e.preventDefault(); e.stopPropagation(); go(-1); }
     else if (e.key === "ArrowRight" && e.target.tagName !== "VIDEO") { e.preventDefault(); e.stopPropagation(); go(1); }
+    // 跟底栏同一个删除：不再询问。输入框和已经打开的浮层不抢键。
+    // 按住不放的连发只算一次，避免按键重复把后面的图也删掉。
+    else if (e.key === "Delete" && !document.querySelector(".mb-pop") && !viewKeyInField(e.target)) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      if (e.repeat) return;
+      void trashViewing();
+    }
   };
+  const releasePaintPan=()=>{paintPanHeld=false;lay.classList.remove("paint-pan");};
+  const onPanKeyUp=(e)=>{if(e.code === "Space")releasePaintPan();};
+  const onViewerBlur=()=>{releasePaintPan();drag=null;stage.classList.remove("panning");};
+  document.addEventListener("keyup",onPanKeyUp,true);
+  window.addEventListener("blur",onViewerBlur);
   document.addEventListener("keydown", onKey, true);
-  lay.addEventListener("pointerdown", (e) => { if (e.target === lay) shut(); });
+  lay.addEventListener("pointerdown", (e) => { if (!paintMode && e.target === lay) shut(); });
   // 点图片本身也关 —— 「点一下打开、再点一下关掉」，手不用跑去右上角找 ×。
   // 放大后点图片不再关：那是在看细节；关掉走 × / Esc / 点画面外。
   // ⚠️ 只认 <img>：视频和音频的点击归播放器管（暂停 / 拖进度条），抢了就没法控制播放。
   let swiped = false;
   stage.addEventListener("click", (e) => {
+    if (paintMode) { e.preventDefault(); e.stopPropagation(); return; }
     if (swiped) { swiped = false; return; }   // 刚才那一下是滑动翻页，不是点
     if (e.target.tagName !== "IMG") return;
     if (!viewClickCloses(z, panned)) return;
     shut();
   });
   stage.addEventListener("wheel", (e) => {
-    if (!stage.querySelector("img")) return;
+    if (!stage.querySelector("img:not(.mb-overlay-image)")) return;
     e.preventDefault();
     e.stopPropagation();
+    // 落笔过程中暂停缩放，防止同一笔的采样坐标突然改变。
+    if (paintStroke || paintRect || paintMove || drag) return;
     const next = viewZoomAfterWheel(z, e.deltaY);
     if (next === z && (z === VIEW_ZOOM_MIN || z === VIEW_ZOOM_MAX)) return;
-    const img = stage.querySelector("img");
+    const img = stage.querySelector("img:not(.mb-overlay-image)");
     const r = img.getBoundingClientRect();
     const cx = e.clientX - (r.left + r.width / 2);
     const cy = e.clientY - (r.top + r.height / 2);
@@ -3354,6 +4226,14 @@ function openViewer(list, startIdx, root, onPick, hooks = {}) {
     // 就被白白吃掉 —— 表现成「点了没反应，要点两下」。实测踩到。
     swiped = false;
     panned = false;
+    if (paintMode) {
+      if (paintBusy || paintStroke || paintRect || paintMove || !(e.button===1 || (e.button===0 && paintPanHeld))) return;
+      e.preventDefault();paintCursor.hidden=true;
+      drag={x:e.clientX,y:e.clientY,tx,ty,id:e.pointerId};
+      stage.classList.add("panning");
+      try{stage.setPointerCapture(e.pointerId);}catch{}
+      return;
+    }
     if (viewCanPan(z) && e.target.tagName === "IMG") {
       drag = { x: e.clientX, y: e.clientY, tx, ty, id: e.pointerId };
       stage.classList.add("panning");
@@ -3377,6 +4257,7 @@ function openViewer(list, startIdx, root, onPick, hooks = {}) {
   };
   stage.addEventListener("pointerup", (e) => {
     endDrag(e);
+    if (paintMode) return;
     if (e.pointerType !== "touch" || swX == null) return;
     const dx = e.clientX - swX, dy = e.clientY - swY;
     swX = swY = null;
@@ -3386,13 +4267,22 @@ function openViewer(list, startIdx, root, onPick, hooks = {}) {
     go(dx < 0 ? 1 : -1);                      // 往左滑 = 下一张，跟翻书一个方向
   });
   stage.addEventListener("pointercancel", endDrag);
+  stage.addEventListener("lostpointercapture", endDrag);
+  stage.addEventListener("auxclick",e=>{if(paintMode && e.button===1)e.preventDefault();});
+  // 打码手势必须后挂、并走捕获阶段：这样平时点图关掉 / 滑动翻页 / 滚轮缩放
+  // 的监听仍是契约测试扫到的那几段；打码时再把它们拦下来。
+  stage.addEventListener("pointerdown", beginPaintDrag, true);
+  stage.addEventListener("pointermove", movePaintDrag, true);
+  stage.addEventListener("pointerup", endPaintDrag, true);
+  stage.addEventListener("pointercancel", endPaintDrag, true);
   lay.querySelector(".mb-x").onclick = shut;
   lay.querySelector(".cls").onclick = shut;
   lay.querySelector(".prev").onclick = () => go(-1);
   lay.querySelector(".next").onclick = () => go(1);
   const pickBtn = lay.querySelector(".pick");
   if (typeof onPick === "function") {
-    pickBtn.onclick = () => { shut(); onPick(list[idx]); };
+    // 取消离开或保存失败时不能继续选图并关闭背后的面板。
+    pickBtn.onclick = async () => { const path=list[idx];if(await shut())onPick(path); };
   } else {
     pickBtn.hidden = true;
   }
@@ -3415,7 +4305,7 @@ function openPicker({ folder, spec, current, onPick, node } = {}) {
         <div class="mb-top-head">
           <div class="mb-top-row">
             <input type="text" data-i18n-placeholder="搜索文件名…（当前范围内）" placeholder="搜索文件名…（当前范围内）">
-            <select class="mb-root" data-i18n-title="选择真实媒体目录。收藏和最近在旁边单独切换" title="选择真实媒体目录。收藏和最近在旁边单独切换">
+            <select class="mb-root" data-i18n-title="选择媒体目录" title="选择媒体目录">
               <optgroup data-i18n-label="目录" label="目录">
                 <option value="input" data-i18n-title="ComfyUI 的 input 目录" title="ComfyUI 的 input 目录">input</option>
                 <option value="output" data-i18n-title="ComfyUI 的 output 目录" title="ComfyUI 的 output 目录">output</option>
@@ -3436,8 +4326,9 @@ function openPicker({ folder, spec, current, onPick, node } = {}) {
             <label><input type="checkbox" class="mb-rec"> <span data-i18n="递归全部">递归全部</span></label>
           </div>
           <div class="mb-chrome">
-            <button type="button" data-act="refresh" data-i18n-title="重新扫一遍当前目录（出片后点这里，不会自动盯盘）" title="重新扫一遍当前目录（出片后点这里，不会自动盯盘）">${mbIco("lucide--refresh-cw")}</button>
+            <button type="button" data-act="refresh" data-i18n-title="刷新当前目录" title="刷新当前目录">${mbIco("lucide--refresh-cw")}</button>
             <button type="button" data-act="settings" data-i18n-title="设置：显示、检测、存储" title="设置：显示、检测、存储">${mbIco("lucide--settings")}</button>
+            <button type="button" data-act="fullscreen" title="${escHtml(t("浏览器全屏"))}">${mbIco("lucide--maximize")}</button>
             <button type="button" data-act="max" data-i18n-title="最大化 / 窗口化" title="最大化 / 窗口化">${mbIco("lucide--maximize-2")}</button>
             <button type="button" data-act="close" data-i18n-title="关闭浏览，不改动节点" title="关闭浏览，不改动节点">${mbIco("lucide--x")}</button>
           </div>
@@ -3459,18 +4350,14 @@ function openPicker({ folder, spec, current, onPick, node } = {}) {
             </span>
           </span>
           <span class="mb-ops-g mb-censor-g">
-            <span class="mb-seg-label" data-i18n="遮蔽" data-i18n-title="三种显示，同时只能选一个。局部只遮检测出来的部位。旁边的扫描图标检测眼前这一屏，说明在图标上。" title="三种显示，同时只能选一个。局部只遮检测出来的部位。旁边的扫描图标检测眼前这一屏，说明在图标上。">遮蔽</span>
-            <span class="mb-seg" data-i18n-title="三种显示，同时只能选一个。局部只遮检测出来的部位。旁边的扫描图标检测眼前这一屏，说明在图标上。" title="三种显示，同时只能选一个。局部只遮检测出来的部位。旁边的扫描图标检测眼前这一屏，说明在图标上。">
-              <button type="button" data-censor="off" data-i18n="原图" title="${CENSOR_TITLE.off}">原图</button>
-              <button type="button" data-censor="full" data-i18n="全幅" title="${CENSOR_TITLE.full}">全幅</button>
-              <span class="mb-local-hit">
-                <button type="button" data-censor="local" data-i18n="局部" title="${CENSOR_TITLE.local}">局部</button>
-                <button type="button" class="mb-detect" title="">${mbScanIco()}</button>
-              </span>
+            <span class="mb-seg">
+              <label><input type="checkbox" data-censor="local">${escHtml(t("显示遮蔽"))}</label>
+              <label><input type="checkbox" data-censor="full">${escHtml(t("整图模糊"))}</label>
+              <span class="mb-local-hit"><button type="button" class="mb-detect" title="${escHtml(t("智能打码当前列表"))}">${mbScanIco()}</button></span>
             </span>
           </span>
-          <button type="button" data-act="preload" class="mb-shot" data-i18n-title="预加载当前列表里的原图。会先问你一次。视频不拉。窗口不锁，再点一次取消。" title="预加载当前列表里的原图。会先问你一次。视频不拉。窗口不锁，再点一次取消。">${mbIco("lucide--image")}</button>
-          <button type="button" data-act="shot-box" class="mb-shot" data-i18n-title="整窗截图：把浏览窗口当前画面拷进剪贴板。局域网 IP 下会提示改用 127.0.0.1 或 https" title="整窗截图：把浏览窗口当前画面拷进剪贴板。局域网 IP 下会提示改用 127.0.0.1 或 https">${mbIco("lucide--camera")}</button>
+          <button type="button" data-act="preload" class="mb-shot" data-i18n-title="预加载当前列表图片" title="预加载当前列表图片">${mbIco("lucide--image")}</button>
+          <button type="button" data-act="shot-box" class="mb-shot" data-i18n-title="复制浏览窗口截图" title="复制浏览窗口截图">${mbIco("lucide--camera")}</button>
         </div>
       </div>
       <div class="mb-crumbrow">
@@ -3540,6 +4427,8 @@ function openPicker({ folder, spec, current, onPick, node } = {}) {
   let cwd = initialScope.cwd;
   // 遮蔽三态跨会话保留。旧键 mediabrowser.blur=1 当成全幅。
   let censorMode = loadCensorMode();
+  let fullBlur = loadStr("mediabrowser.fullBlur", censorMode === "full" ? "1" : "0") === "1";
+  if (censorMode === "full") censorMode = "off";
   let inferAbort = new AbortController();
   // 面板生命周期的控制器：关面板时中止一切在飞的请求。
   // 不能跟 inferAbort 共用 —— 那个每轮检测都会被换掉，
@@ -3598,7 +4487,7 @@ function openPicker({ folder, spec, current, onPick, node } = {}) {
   const toggleFav = (p) => toggleFavIn(realRoot(), p);
   const isMarked = (p) => blurMarks(realRoot()).has(p);
   const isSkipDetect = (p) => skipMarks(realRoot()).has(p);
-  const isBlurred = (p) => censorMode === "full" || isMarked(p);
+  const isBlurred = (p) => fullBlur || isMarked(p);
   const needsPeek = (p) => {
     if (isBlurred(p)) return true;
     if (censorMode !== "local" || isSkipDetect(p)) return false;
@@ -3685,7 +4574,7 @@ function openPicker({ folder, spec, current, onPick, node } = {}) {
   });
   restackPickerLayers();
   const onKey = (e) => {
-    if (e.key !== "Escape") return;
+    if (e.key !== "Escape" || document.fullscreenElement) return;
     if (!consumePickerEsc(
       pickerRegistry.front()?.mask, mask,
       !!document.querySelector(".mb-confirm"),
@@ -3748,7 +4637,7 @@ function openPicker({ folder, spec, current, onPick, node } = {}) {
   const pool = new Map();
   let fixT = null;
   const releaseCell = (el) => {
-    const im = el.querySelector("img");
+    const im = el.querySelector("img:not(.mb-overlay-image)");
     if (im) {
       im.onload = im.onerror = null;
       if (!im.complete) im.src = BLANK_PX;
@@ -3826,6 +4715,7 @@ function openPicker({ folder, spec, current, onPick, node } = {}) {
 
   // 打开大图 / 播放。放大钮和「点一下图片」都走这里，免得两处各写一份钩子。
   const openViewerAt = (path) => {
+    const viewerRoot=realRoot();
     const files = show.filter((x) => x.type !== "dir").map((x) => x.path);
     const hooks = {
       isFav,
@@ -3855,7 +4745,19 @@ function openPicker({ folder, spec, current, onPick, node } = {}) {
       thumbOf: (pp) => `/mediabrowser/thumb?filename=${encodeURIComponent(pp)}` +
         `&type=${encodeURIComponent(realRoot())}&px=${wantThumbPx(COLS[sizeIdx])}` +
         `&t=${encodeURIComponent(times[pp] ?? 0)}`,
-      shotOne: (pp) => shotSingle(pp),
+      shotOne: (pp, snapshot) => shotSingle(pp, snapshot),
+      copyPlain: (pp, snapshot) => copyPlain(pp, snapshot),
+      copyImage: (pp, snapshot) => copyPlain(pp, snapshot, true),
+      getFullBlur: () => fullBlur,
+      setFullBlur: (on) => {fullBlur=on;save("mediabrowser.fullBlur",on?"1":"0");setCensorMode(censorMode);},
+      fileVer: (pp) => times[pp] || 0,
+      savePaint: (pp, record, signal) => saveOverlay(viewerRoot, pp, record, signal),
+      detectForEdit: async (pp,signal) => {
+        const r=await fetch(`/mediabrowser/regions?type=${encodeURIComponent(viewerRoot)}&filename=${encodeURIComponent(pp)}&infer=1&force=1`,{signal});
+        const rec=await r.json();
+        if(!r.ok || !Array.isArray(rec.boxes))throw new Error(t("检测未完成，请重试智能打码"));
+        return rec;
+      },
       ensureLocal: (pp, force) => ensureLocal(pp, !!force),
       trashOne: (pp) => trashCurrent(pp),
     };
@@ -3932,13 +4834,21 @@ function openPicker({ folder, spec, current, onPick, node } = {}) {
       },
     }, {
       id: "shot", ico: "lucide--camera", short: t("截图"),
-      lab: t("截进剪贴板"), effect: t("按当前遮蔽截这一张：原图 / 全幅 / 局部"),
+      lab: t("截进剪贴板"), effect: t("复制当前画面"),
       act: () => shotSingle(path),
+    }, {
+      id: "copyimage", ico: "lucide--image-workflow", short: t("复制"),
+      lab: t("复制图片（含工作流）"), effect: t("复制当前画面并保留工作流"),
+      act: () => copyPlain(path,undefined,true),
+    }, {
+      id: "plain", ico: "lucide--image", short: t("纯图"),
+      lab: t("复制纯图"), effect: t("复制当前画面，不含工作流"),
+      act: () => copyPlain(path),
     });
     if (isPng || isVid) {
       A.push({
         id: "meta", ico: "lucide--info", short: t("提示词"),
-        lab: t("提示词和参数"), effect: t("这次用的词和参数，可一键复制"),
+        lab: t("提示词和参数"), effect: t("查看并复制生成参数"),
         act: (b) => showMeta(path, b || c),
       });
       // 只在「确定有工作流」时才给。-1 = 视频还没问过，先给上（见 wfState 的注释）。
@@ -3968,7 +4878,7 @@ function openPicker({ folder, spec, current, onPick, node } = {}) {
     }
     A.push({
       id: "trash", ico: "lucide--trash-2", short: t("回收站"),
-      lab: t("移到回收站"), effect: t("会先问你一次；真的会从磁盘拿走（可在系统回收站还原）"),
+      lab: t("移到回收站"), effect: t("移到系统回收站，可还原"),
       act: async () => {
         if (!await confirmTrash(path)) return;
         try {
@@ -4171,7 +5081,7 @@ function openPicker({ folder, spec, current, onPick, node } = {}) {
     const now = natW / natH;
     if (Math.abs(was - now) < 0.02) return;          // 差不多就别动，省得白重排
     dims[path] = [natW, natH, d ? d[2] : -1];
-    if (censorMode === "local") applyLocalCaches();  // 封面比例校正后重画框
+    applyLocalCaches();  // 封面比例校正后重画框
     if (!masonry) return;                            // 宫格是等大方块，比例不影响排版
     clearTimeout(fixT);
     fixT = setTimeout(() => { layout(); paint(); }, 220);
@@ -4271,10 +5181,10 @@ function openPicker({ folder, spec, current, onPick, node } = {}) {
 
   const lockTitleOf = (locked) => {
     const base = locked
-      ? t("已锁：这张以后打开都是糊的。点一下解锁")
-      : t("锁上：这张以后打开也是糊的（只管这一张）");
-    return censorMode === "full"
-      ? `${base}\n${t("（顶上是「全幅」，所以现在锁不锁画面都是糊的 —— 切到原图才看得出区别）")}`
+      ? t("解除整图模糊锁定")
+      : t("锁定整图模糊");
+    return fullBlur
+      ? `${base}\n${t("整图模糊已开启")}`
       : base;
   };
   const paintLockOnCell = (el, path, now) => {
@@ -4284,7 +5194,7 @@ function openPicker({ folder, spec, current, onPick, node } = {}) {
       b.classList.toggle("on", now);
       b.title = lockTitleOf(now);
     }
-    const eff = censorMode === "full" || now;
+    const eff = fullBlur || now;
     el.classList.toggle("blurred", eff);
     if (eff) attachPeekBtn(el);
     else {
@@ -4320,10 +5230,10 @@ function openPicker({ folder, spec, current, onPick, node } = {}) {
       if (el.dataset.path === path) paintLockOnCell(el, path, now);
     }
     notify(now
-      ? (censorMode === "full"
+      ? (fullBlur
         ? t("已锁住这一张（切到原图后才看得出）。再点锁解开")
         : t("已锁：这张以后打开都是糊的。再点锁解开"))
-      : (censorMode === "full"
+      : (fullBlur
         ? t("已解锁这一张（切到原图后才看得出）")
         : t("已解锁，这张不再单独糊")));
     return now;
@@ -4716,12 +5626,13 @@ function openPicker({ folder, spec, current, onPick, node } = {}) {
     if (!inferBusy && !preloadBusy) {
       hint.textContent = t("已渲染 {n} 格 · 点图选中，点文件夹进入", { n: pool.size });
     }
-    if (censorMode === "local") {
+    if (censorMode === "local" || fullBlur) {
       applyLocalCaches();
       void hydrateCacheOnly();
     }
     scheduleClipInfo();
     syncSelection();
+    syncDetectBtn();
   };
 
   const render = (keepScroll) => {
@@ -4843,7 +5754,7 @@ function openPicker({ folder, spec, current, onPick, node } = {}) {
     setIco(refreshBtn, "lucide--refresh-cw", on ? "spin" : "");
     refreshBtn.title = on
       ? t("正在重新扫盘…")
-      : t("重新扫一遍当前目录（出片后点这里，不会自动盯盘）");
+      : t("刷新当前目录");
   };
   // 把「一份列表结果」摊到界面上。load 和后台刷新都走它，免得两处各写一遍。
   const applyList = (got, first) => {
@@ -5037,35 +5948,20 @@ function openPicker({ folder, spec, current, onPick, node } = {}) {
     return out;
   };
   const applyLocalCaches = () => {
-    if (censorMode !== "local") {
-      // 退出局部模式：等待态必须清干净，否则原图 / 全幅下还糊着一批
-      for (const el of scroll.querySelectorAll(".mb-cell.censor-wait")) {
-        el.classList.remove("censor-wait");
+    for (const {el,path} of visibleMedia()) {
+      const flags={showOverlay:censorMode === "local",fullBlur:fullBlur || isMarked(path)};
+      if(!flags.showOverlay && !flags.fullBlur) {el._overlaySeq=(el._overlaySeq||0)+1;el.querySelector(".mb-censor-layer")?.remove();el.classList.remove("censor-wait");continue;}
+      let cached=overlayCache.get(regionKey(realRoot(),path));
+      if(cached && times[path] && Math.abs(Number(cached.sourceVersion.mtimeNs)/1e9-times[path])>.001) {
+        overlayCache.delete(regionKey(realRoot(),path));cached=null;
       }
-      return;
+      const waiting=flags.showOverlay && !isSkipDetect(path) && censorWaitBlurs() && !cached?.exists && !regionMem.get(regionKey(realRoot(),path))?.boxes;
+      flags.fullBlur ||= waiting;
+      el.classList.toggle("censor-wait",waiting);
+      paintCensorOverlay(el,null,dims[path],masonry,censorRuleFor(realRoot(),path),realRoot(),path,flags);
+      attachPeekBtn(el);
     }
-    for (const { el, path } of visibleMedia()) {
-      if (isMarked(path) || isSkipDetect(path)) {
-        // 整张糊有自己的 .blurred；跳过河蟹是「这张不用管」——两种都不该再挂等待态
-        el.classList.remove("censor-wait");
-        el.querySelector(".mb-censor-layer")?.remove();
-        continue;
-      }
-      const rec = regionMem.get(regionKey(realRoot(), path));
-      if (rec?.boxes) {
-        el.classList.remove("censor-wait");     // 框到了，从「先糊着」换成精确遮蔽
-        paintCensorOverlay(el, rec.boxes, dims[path], masonry, censorRuleFor(realRoot(), path));
-        if (filterClientBoxes(rec.boxes).length) attachPeekBtn(el);
-      } else if (censorWaitBlurs()) {
-        // 还没有框：先按全幅糊着，别把原图亮在那儿等检测（见 CENSOR_WAIT_KEY 的注释）
-        el.classList.add("censor-wait");
-        attachPeekBtn(el);                      // 想看就点眼睛，随时能揭开
-      } else {
-        // 设成「先显示原图」：什么都不做，框到了自然会盖上去
-        el.classList.remove("censor-wait");
-      }
-    }
-    updateUnhitHint();
+    if(censorMode === "local")updateUnhitHint();
   };
   // 真正在视口里的媒体，**按看到的顺序**（从上到下、同排从左到右）。
   //
@@ -5105,7 +6001,7 @@ function openPicker({ folder, spec, current, onPick, node } = {}) {
     const btn = mask.querySelector(".mb-detect");
     if (!btn) return;
     mask.querySelector(".mb-local-hit")?.classList.toggle("on", censorMode === "local");
-    btn.onclick = () => { if (inferBusy) inferAbort?.abort(); else startInfer(); };
+    btn.onclick = () => { if (inferBusy) inferAbort?.abort(); else {setCensorMode("local");startInfer();} };
     if (inferBusy) {
       btn.classList.add("busy");
       btn.disabled = false;
@@ -5122,18 +6018,11 @@ function openPicker({ folder, spec, current, onPick, node } = {}) {
       return;
     }
     btn.classList.remove("busy");
-    if (censorMode !== "local") {
-      btn.disabled = true;
-      const tip = t("先点「局部」，再点这个图标检测眼前这一屏。检测不会自动跑。");
-      btn.title = tip;
-      btn.setAttribute("aria-label", tip);
-      return;
-    }
     const n = unhitVisible().length;
-    btn.disabled = n === 0;
+    btn.disabled = mediaInView().length === 0;
     const tip = n
-      ? t("检测眼前看得见的 {n} 张，标出要遮的部位。结果存下来，同一张图不会再检第二次。不检整个文件夹。", { n })
-      : t("眼前这一屏都检测过了。滚到没检过的图，这里会自己亮起来。");
+      ? t("智能打码当前可见的 {n} 张图片", { n })
+      : t("当前可见图片已检测");
     btn.title = tip;
     btn.setAttribute("aria-label", tip);
   };
@@ -5149,11 +6038,12 @@ function openPicker({ folder, spec, current, onPick, node } = {}) {
   // signal 必须由调用方显式传进来，不能在这里读全局 inferAbort ——
   // 那个变量会被下一轮检测换掉，读它等于「用别人的取消信号」。
   const fetchOne = async (path, infer, force = false, signal = null) => {
-    const k = regionKey(realRoot(), path);
+    const folder=realRoot();
+    const k = regionKey(folder, path);
     if (force) regionMem.delete(k);
     try {
       const u = `/mediabrowser/regions?filename=${encodeURIComponent(path)}` +
-        `&type=${encodeURIComponent(realRoot())}&infer=${infer ? 1 : 0}` +
+        `&type=${encodeURIComponent(folder)}&infer=${infer ? 1 : 0}` +
         (force ? "&force=1" : "");
       const r = await fetch(u, signal ? { signal } : {});
       const j = await r.json().catch(() => null);
@@ -5168,6 +6058,13 @@ function openPicker({ folder, spec, current, onPick, node } = {}) {
         const rec = { boxes: null, reason: j.reason || (j.error === "文件不存在" ? "missing" : "failed") };
         regionMem.set(k, rec);
         return rec;
+      }
+      if (!mask.isConnected || realRoot()!==folder || signal?.aborted) return null;
+      if (infer && Array.isArray(j.boxes) && canPaintFile(path)) {
+        const record=await loadOverlay(folder,path,true);
+        if (!mask.isConnected || realRoot()!==folder || signal?.aborted) return null;
+        const merged=overlayMerge(record,detectedOps(j.boxes,censorRuleFor(folder,path)),force);
+        await saveOverlay(folder,path,merged,signal || panelAbort.signal);
       }
       regionMem.set(k, j);
       return j;
@@ -5185,7 +6082,7 @@ function openPicker({ folder, spec, current, onPick, node } = {}) {
       if (!mask.isConnected) return;
       const rec = await fetchOne(path, false, false, panelAbort.signal);
       if (rec?.reason === "no_backend") {
-        flash(t("局部接口是 404：必须关掉 Comfy 的 Python 窗口再启动，只刷新网页不够"));
+        flash(t("遮蔽服务不可用，请重启 ComfyUI"));
         return;
       }
     }
@@ -5201,6 +6098,7 @@ function openPicker({ folder, spec, current, onPick, node } = {}) {
   //    所以这里必须**报出结果有没有变**，没变时把人指到真正的旋钮上，
   //    否则用户只会反复点同一个按钮等一个永远不会来的不同结果。
   const redoOne = async (path, el) => {
+    setCensorMode("local");
     const rule0 = censorRuleFor(realRoot(), path);
     const before = filterClientBoxes(
       regionMem.get(regionKey(realRoot(), path))?.boxes, rule0).length;
@@ -5216,7 +6114,7 @@ function openPicker({ folder, spec, current, onPick, node } = {}) {
     if (!mask.isConnected || !rec) return;
     if (el) syncRedoOnCell(el, path);
     if (rec.reason === "no_backend") {
-      flash(t("局部接口是 404：必须关掉 Comfy 的 Python 窗口再启动，只刷新网页不够"));
+      flash(t("遮蔽服务不可用，请重启 ComfyUI"));
       return;
     }
     if (rec.reason === "no_runtime" || rec.reason === "no_weights") {
@@ -5227,13 +6125,13 @@ function openPicker({ folder, spec, current, onPick, node } = {}) {
       return;
     }
     if (el && censorMode === "local" && !isMarked(path)) {
-      if (rec.boxes) paintCensorOverlay(el, rec.boxes, dims[path], masonry, censorRuleFor(realRoot(), path));
+      if (rec.boxes) paintCensorOverlay(el, rec.boxes, dims[path], masonry, censorRuleFor(realRoot(), path), realRoot(), path, {showOverlay:censorMode === "local",fullBlur:fullBlur || isMarked(path)});
       else el.querySelector(".mb-censor-layer")?.remove();
       if (filterClientBoxes(rec.boxes).length) attachPeekBtn(el);
     }
     const n = filterClientBoxes(rec.boxes, censorRuleFor(realRoot(), path)).length;
     if (censorMode !== "local") {
-      flash(n ? t("已重新检测。切到「局部」才能看到框") : t("重新检测过了，这张没有要遮的部位"));
+      flash(n ? t("智能打码完成") : t("重新检测过了，这张没有要遮的部位"));
       return;
     }
     if (!n) {
@@ -5540,6 +6438,8 @@ function openPicker({ folder, spec, current, onPick, node } = {}) {
 
   };
 
+  const onPanelOverlaySaved=(e)=>{if(e.detail.root===realRoot() && mask.isConnected)applyLocalCaches();};
+  overlayEvents.addEventListener("saved",onPanelOverlaySaved,{signal:panelAbort.signal});
   const startInfer = async () => {
     if (censorMode !== "local") return;
     // 必须把控制器捕获成局部变量：循环里如果判断全局 inferAbort，
@@ -5551,7 +6451,7 @@ function openPicker({ folder, spec, current, onPick, node } = {}) {
     inferAbort = ac;
     const batch = unhitVisible();
     if (!batch.length) {
-      flash(t("眼前这一屏都已检测。滚到没检过的图，再点局部旁边的扫描图标"));
+      flash(t("当前可见图片已检测"));
       updateUnhitHint();
       return;
     }
@@ -5567,7 +6467,7 @@ function openPicker({ folder, spec, current, onPick, node } = {}) {
       if (el) syncRedoOnCell(el, path);
       if (!mask.isConnected) return "dead";
       if (rec?.reason === "no_backend") {
-        flash(t("局部接口是 404：必须关掉 Comfy 的 Python 窗口再启动，只刷新网页不够"));
+        flash(t("遮蔽服务不可用，请重启 ComfyUI"));
         return "fatal";
       }
       if (rec?.reason === "no_runtime" || rec?.reason === "no_weights") {
@@ -5579,7 +6479,7 @@ function openPicker({ folder, spec, current, onPick, node } = {}) {
       }
       if (rec?.boxes && !isMarked(path)) {
         el.classList.remove("censor-wait");
-        paintCensorOverlay(el, rec.boxes, dims[path], masonry, censorRuleFor(realRoot(), path));
+        paintCensorOverlay(el, rec.boxes, dims[path], masonry, censorRuleFor(realRoot(), path), realRoot(), path, {showOverlay:censorMode === "local",fullBlur:fullBlur || isMarked(path)});
         if (filterClientBoxes(rec.boxes).length) attachPeekBtn(el);
       } else if (rec && !rec.boxes && rec.reason !== "failed") {
         el.classList.remove("censor-wait");
@@ -5626,7 +6526,7 @@ function openPicker({ folder, spec, current, onPick, node } = {}) {
   };
   const syncCensorSeg = () => {
     mask.querySelectorAll("[data-censor]").forEach((b) => {
-      b.classList.toggle("on", b.dataset.censor === censorMode);
+      b.checked=b.dataset.censor === "full" ? fullBlur : censorMode === "local";
     });
   };
   const setCensorMode = (m) => {
@@ -5635,8 +6535,10 @@ function openPicker({ folder, spec, current, onPick, node } = {}) {
     censorMode = m;
     save(CENSOR_KEY, m);
     syncCensorSeg();
+    for (const [,el] of pool) el._overlaySeq=(el._overlaySeq||0)+1;
     releasePool();
     paint();
+    applyLocalCaches();
     // 切进局部**不再**自动开检 —— 检测是「点一下才执行」，按钮就在旁边。
     // 切出局部要把正在跑的那轮停掉：结果已经落盘，白跑的只是电。
     if (m !== "local") { inferAbort?.abort(); inferBusy = false; }
@@ -5647,11 +6549,13 @@ function openPicker({ folder, spec, current, onPick, node } = {}) {
   syncDetectBtn();
   mask.querySelectorAll("[data-censor]").forEach((b) => {
     b.onclick = () => {
-      setCensorMode(b.dataset.censor);   // 只切档；检测是隔壁那个按钮的事
+      if (b.dataset.censor === "full") {fullBlur=b.checked;save("mediabrowser.fullBlur",fullBlur?"1":"0");setCensorMode(censorMode);}
+      else setCensorMode(b.checked?"local":"off");
     };
   });
 
   const ensureLocal = async (path, force = false) => {
+    setCensorMode("local");
     if (isSkipDetect(path) && !force) return { boxes: null, reason: "skipped" };
     if (isSkipDetect(path) && force) {
       toggleSkipDetect(realRoot(), path);
@@ -5664,7 +6568,7 @@ function openPicker({ folder, spec, current, onPick, node } = {}) {
     if (censorMode === "local" && rec.boxes && !isMarked(path) && !isSkipDetect(path)) {
       for (const [, el] of pool) {
         if (el.dataset.path !== path) continue;
-        paintCensorOverlay(el, rec.boxes, dims[path], masonry, censorRuleFor(realRoot(), path));
+        paintCensorOverlay(el, rec.boxes, dims[path], masonry, censorRuleFor(realRoot(), path), realRoot(), path, {showOverlay:censorMode === "local",fullBlur:fullBlur || isMarked(path)});
         if (filterClientBoxes(rec.boxes).length) attachPeekBtn(el);
       }
     }
@@ -5738,24 +6642,24 @@ function openPicker({ folder, spec, current, onPick, node } = {}) {
         t.x + 10, t.y + t.h / 2, t.w - 16);
     }
     for (const [, el] of pool) {
-      const img = el.querySelector("img");
+      const img = el.querySelector("img:not(.mb-overlay-image)");
       const er = rel(el);
       if (er.y + er.h < 0 || er.y > H || er.x + er.w < 0 || er.x > W) continue;
       ctx.fillStyle = "#2a2a2a";
       rr(er.x, er.y, er.w, er.h, 6);
       ctx.fill();
       if (img?.naturalWidth) {
-        drawCover(ctx, img, er.x, er.y, er.w, er.h);
-        const path = el.dataset.path;
-        if (censorMode === "full" || (path && isMarked(path))) {
-          blurPatch(ctx, er.x, er.y, er.w, er.h, 16);
-        } else if (censorMode === "local" && path) {
-          const rec = regionMem.get(regionKey(realRoot(), path));
-          const dim = dims[path];
-          for (const b of visibleBoxes(rec?.boxes, censorRuleFor(realRoot(), path))) {
-            const mapped = mapBoxToEl(b, dim?.[0] || img.naturalWidth, dim?.[1] || img.naturalHeight, er.w, er.h, masonry);
-            blurPatch(ctx, er.x + mapped.x, er.y + mapped.y, mapped.w, mapped.h, 14);
+        const rendered=el.querySelector(".mb-overlay-image");
+        const peek=el.classList.contains("peek");
+        const source=!peek && rendered?.complete && rendered.naturalWidth ? rendered : img;
+        drawCover(ctx,source,er.x,er.y,er.w,er.h);
+        if(!peek && source===img){
+          const path=el.dataset.path;
+          if(censorMode === "local" && !canPaintFile(path))for(const b of visibleBoxes(regionMem.get(regionKey(realRoot(),path))?.boxes,censorRuleFor(realRoot(),path))){
+            const r=mapBoxToEl(b,img.naturalWidth,img.naturalHeight,er.w,er.h,masonry);
+            blurPatch(ctx,er.x+r.x,er.y+r.y,r.w,r.h,censorRuleFor(realRoot(),path)?.blur || censorBlur());
           }
+          if(fullBlur || isMarked(path) || el.classList.contains("censor-wait"))blurPatch(ctx,er.x,er.y,er.w,er.h,22);
         }
       }
       const nm = el.querySelector(".nm");
@@ -5783,54 +6687,45 @@ function openPicker({ folder, spec, current, onPick, node } = {}) {
       else flash(msg);
     }
   };
-  const shotSingle = async (path) => {
-    const p = path || current;
-    if (!p) { flash(t("先点开一张大图，或用节点里已经选中的那张")); return; }
-    const isVid = KIND_VID.test(p);
-    const slash = p.lastIndexOf("/");
-    const sub = slash < 0 ? "" : p.slice(0, slash);
-    const name = slash < 0 ? p : p.slice(slash + 1);
-    const url = isVid
-      // 同样要带 mtime —— 走的是同一个 7 天缓存，视频被覆盖后不带就会抓到旧帧
-      ? `/mediabrowser/thumb?filename=${encodeURIComponent(p)}&type=${encodeURIComponent(realRoot())}&px=768` +
-        `&t=${encodeURIComponent(times[p] ?? 0)}`
-      : `/api/view?filename=${encodeURIComponent(name)}&subfolder=${encodeURIComponent(sub)}&type=${encodeURIComponent(realRoot())}`;
-    try {
-      await writePng((async () => {
-        const img = new Image();
-        img.crossOrigin = "anonymous";
-        await new Promise((res, rej) => {
-          img.onload = res;
-          img.onerror = () => rej(new Error(t("图加载失败")));
-          img.src = url;
-        });
-        const max = 2048;
-        let w = img.naturalWidth, h = img.naturalHeight;
-        if (Math.max(w, h) > max) {
-          const s = max / Math.max(w, h);
-          w = Math.round(w * s); h = Math.round(h * s);
-        }
-        const canvas = document.createElement("canvas");
-        canvas.width = w; canvas.height = h;
-        const ctx = canvas.getContext("2d");
-        ctx.drawImage(img, 0, 0, w, h);
-        if (censorMode === "full" || isMarked(p)) {
-          blurPatch(ctx, 0, 0, w, h, 22);
-        } else if (censorMode === "local") {
-          let rec = regionMem.get(regionKey(realRoot(), p));
-          if (!rec) rec = await fetchOne(p, false);
-          for (const b of visibleBoxes(rec?.boxes, censorRuleFor(realRoot(), p))) {
-            blurPatch(ctx, b.x * w, b.y * h, b.w * w, b.h * h, 16);
-          }
-        }
-        return canvasToBlob(canvas);
-      })());
-      flash(t("单图已复制"));
-    } catch (e) {
-      const msg = e.message || t("截图失败");
-      if (clipInsecure() && /剪贴板|clipboard/i.test(msg)) showClipHelp();
-      else flash(msg);
+  const renderShotBlob = async (p, supplied, keepWorkflow=false) => {
+    // 点击时冻结真实根目录和可见状态；请求期间翻页不能改变导出对象。
+    const folder=supplied?.root || realRoot();
+    const cell=[...pool.values()].find(el=>el.dataset.path===p);
+    // 已显示的合成图可能仍是等待态；不能用当前开关覆盖它而导出未遮蔽原图。
+    const visible=cell?.querySelector(".mb-overlay-image") && cell._visibleOverlay;
+    const snapshot=overlayClone(supplied || (visible
+      ? {...visible,peeking:cell.classList.contains("peek")}
+      : {...currentOverlay(folder,p,censorRuleFor(folder,p)),
+        ...overlayFlags(censorMode,fullBlur || !!cell?.classList.contains("censor-wait"),isMarked(p),!!cell?.classList.contains("peek"))}));
+    if(canPaintFile(p)) {
+      if(!snapshot.sourceVersion) {const rec=await loadOverlay(folder,p);snapshot.sourceVersion=rec.sourceVersion;}
+      return overlayBlob(folder,p,snapshot,keepWorkflow,panelAbort.signal);
     }
+    // 视频只复制当前可见帧；不触发静图检测或偷偷换成第一帧。
+    const live=[...document.querySelectorAll(".mb-play video")].find(v=>v.src===new URL(viewFileUrl(p,folder,times[p]),document.baseURI).href);
+    if(KIND_VID.test(p) && !live)throw new Error(t("请先打开视频再复制当前帧"));
+    const img=live || new Image();
+    if(!live)await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>reject(new Error(t("图加载失败")));img.src=viewFileUrl(p,folder,times[p]);});
+    const canvas=document.createElement("canvas");canvas.width=img.videoWidth || img.naturalWidth;canvas.height=img.videoHeight || img.naturalHeight;
+    if(!canvas.width || !canvas.height)throw new Error(t("请先打开视频再复制当前帧"));
+    const ctx=canvas.getContext("2d");ctx.drawImage(img,0,0);
+    if(!snapshot.peeking){
+      if(snapshot.showOverlay)for(const op of snapshot.ops || [])paintDrawOp(ctx,op,canvas.width,canvas.height,op.block || 16);
+      if(snapshot.fullBlur)blurPatch(ctx,0,0,canvas.width,canvas.height,22);
+    }
+    return canvasToBlob(canvas);
+  };
+  const shotSingle = async (path,snapshot) => {
+    const p=path || current;if(!p)return;
+    try {await writePng(renderShotBlob(p,snapshot));flash(t("单图已复制"));}
+    catch(e){if(clipInsecure())showClipHelp();else flash(e.message || t("截图失败"));}
+  };
+  const copyPlain = async (path,snapshot,keepWorkflow=false) => {
+    const p=path || current;if(!p)return;
+    try {
+      await writePng(renderShotBlob(p,snapshot,keepWorkflow),keepWorkflow);
+      flash(t(keepWorkflow ? "图片和工作流已复制" : "已复制纯图（无工作流）"));
+    }catch(e){if(clipInsecure())showClipHelp();else flash(e.message || t("复制失败"));}
   };
   mask.querySelector('[data-act="shot-box"]').onclick = () => shotWindow();
 
@@ -5851,7 +6746,7 @@ function openPicker({ folder, spec, current, onPick, node } = {}) {
     }
     btn.classList.remove("busy");
     setIco(btn, "lucide--image");
-    const tip = t("预加载当前列表里的原图。会先问你一次。视频不拉。窗口不锁，再点一次取消。");
+    const tip = t("预加载当前列表图片");
     btn.title = tip;
     btn.setAttribute("aria-label", tip);
   };
@@ -6043,8 +6938,8 @@ function openPicker({ folder, spec, current, onPick, node } = {}) {
               labelGroups +
             `</div>` +
             `<div class="mb-set-card">` +
-              `<h4>${mbIco("lucide--eye-off")} ${escHtml(t("局部档下，还没检测的图"))}</h4>` +
-              `<p class="hint">${escHtml(t("检测要按顶栏局部旁边的扫描图标，不会自动跑。这里决定按之前那些图长什么样。"))}</p>` +
+              `<h4>${mbIco("lucide--eye-off")} ${escHtml(t("尚未检测的图片"))}</h4>` +
+              `<p class="hint">${escHtml(t("设置尚未检测的图片如何显示"))}</p>` +
               `<select class="censorwait">` +
                 `<option value="show"${censorWaitBlurs() ? "" : " selected"}>${escHtml(t("直接显示原图（默认）"))}</option>` +
                 `<option value="blur"${censorWaitBlurs() ? " selected" : ""}>${escHtml(t("先全部遮住"))}</option>` +
@@ -6091,7 +6986,7 @@ function openPicker({ folder, spec, current, onPick, node } = {}) {
               `<div class="mb-usage"></div>` +
               `<div class="purge">` +
                 `<div class="line"><button type="button" data-purge="thumbs">${escHtml(t("清缩略图"))}</button><i>${escHtml(t("腾服务器磁盘用。浏览器自己还缓存 7 天，画面多半不变；要看重新生成得强刷（Ctrl+F5）。"))}</i></div>` +
-                `<div class="line"><button type="button" data-purge="regions">${escHtml(t("清检测框"))}</button><i>${escHtml(t("局部记住的框。下次要点「局部」重检。"))}</i></div>` +
+                `<div class="line"><button type="button" data-purge="regions">${escHtml(t("清检测框"))}</button><i>${escHtml(t("清除自动检测缓存，不影响手动遮蔽"))}</i></div>` +
               `</div>` +
             `</div>` +
             `<div class="mb-set-card">` +
@@ -6155,7 +7050,7 @@ function openPicker({ folder, spec, current, onPick, node } = {}) {
         applyLocalCaches();       // 当场重画：要求切档或重开窗口才生效的话，用户会以为开关坏了
         flash(waitSel.value === "blur"
           ? t("已改成：没检测过的先全部遮住，检测确认过的才逐张露出来")
-          : t("已改成：没检测过的直接显示原图，按局部旁边的扫描图标才盖上遮蔽"));
+          : t("未检测的图片将显示原图"));
       };
     }
     const concurSel = lay.querySelector(".censorconcur");
@@ -6166,7 +7061,7 @@ function openPicker({ folder, spec, current, onPick, node } = {}) {
           ? Math.min(CENSOR_CONCUR_MAX, Math.max(CENSOR_CONCUR_MIN, want))
           : CENSOR_CONCUR_DEFAULT;
         save(CENSOR_CONCUR_KEY, String(v));
-        flash(t("已改成同时检测 {n} 张。下一轮点局部旁边的扫描图标按这个数跑。", { n: v }));
+        flash(t("检测并发数已设为 {n}", { n: v }));
       };
     }
     const thumbSel = lay.querySelector(".thumbpx");
@@ -6308,7 +7203,7 @@ function openPicker({ folder, spec, current, onPick, node } = {}) {
       if (r.ok) {
         regionMem.clear();
         applyLocalCaches();
-        flash(t("已切换权重。已有框按新模型重画；眼前还没检过的点局部旁边的扫描图标"));
+        flash(t("检测模型已切换"));
       } else {
         flash(t(j.error || "保存失败"));
       }
@@ -6447,7 +7342,7 @@ function openPicker({ folder, spec, current, onPick, node } = {}) {
         regionMem.clear();
         applyLocalCaches();
         paintUsage(j.usage);
-        flash(t("已清检测框 {n} 个。局部要重新点一次", { n: j.regions ?? 0 }));
+        flash(t("已清除 {n} 项检测缓存", { n: j.regions ?? 0 }));
       } catch (e) { flash(t(e.message || "清检测框失败")); }
     };
     lay.querySelector("[data-purge=prefs]").onclick = async () => {
@@ -6694,6 +7589,7 @@ function openPicker({ folder, spec, current, onPick, node } = {}) {
 
   // ── 最大化 / 窗口化 ──
   //    只做这两个，不做最小化：关掉已经有 ✕ 和 Esc。
+  mask.querySelector('[data-act="fullscreen"]').onclick=()=>void toggleBrowserFullscreen();
   const maxBtn = mask.querySelector('[data-act="max"]');
   // 窗口化时的默认尺寸。还原时如果"原来的尺寸"本身就接近满屏，
   // 还原了也看不出变化 —— 那就退到这个默认值，让「窗口化」名副其实。
