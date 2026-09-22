@@ -105,13 +105,15 @@ const css = `
   container:mb-picker / inline-size;
   min-width:min(var(--mb-min-w,460px),98vw);min-height:min(var(--mb-min-h,340px),96vh);
   max-width:98vw;max-height:96vh;}
-.mb-fab{position:fixed;z-index:10028;width:48px;height:48px;padding:0;border:1px solid #c9a227;
-  border-radius:14px;background:#161616;color:#e6c35c;font:700 15px/48px ui-sans-serif,system-ui,sans-serif;
-  letter-spacing:.04em;text-align:center;cursor:grab;box-shadow:0 8px 24px rgba(0,0,0,.45);
+.mb-fab{position:fixed;z-index:10028;width:48px;height:48px;padding:0;border:0;
+  border-radius:14px;background:transparent;color:#e6c35c;font:700 15px/48px ui-sans-serif,system-ui,sans-serif;
+  letter-spacing:.04em;text-align:center;cursor:grab;box-shadow:none;
   user-select:none;touch-action:none;}
+.mb-fab img{display:block;width:100%;height:100%;object-fit:contain;pointer-events:none;
+  filter:drop-shadow(0 2px 3px rgba(0,0,0,.45));}
 .mb-fab:active,.mb-fab.dragging{cursor:grabbing;}
 .mb-fab:focus-visible{outline:2px solid #e6c35c;outline-offset:3px;}
-:where(html:not(.mb-touch)) .mb-fab:hover{background:#1c1c1c;border-color:#e0c14a;color:#ffe08a;}
+:where(html:not(.mb-touch)) .mb-fab:hover img{filter:drop-shadow(0 0 4px rgba(230,195,92,.7));}
 .mb-empty{padding:28px 18px;color:#bbb;font-size:13px;line-height:1.55;}
 .mb-top{cursor:grab;}
 .mb-top button,.mb-top input,.mb-top select,.mb-top label{cursor:pointer;}
@@ -6973,7 +6975,13 @@ function mountFab() {
   if (document.querySelector(".mb-fab")) return;
   addStyle();
   const fab = mbElButton("mb-fab");
-  fab.textContent = "MB";
+  // 随扩展解析资源地址；禁用原生图片拖拽，避免抢走浮钮的指针拖动。
+  const avatar = document.createElement("img");
+  avatar.alt = "";
+  avatar.draggable = false;
+  avatar.addEventListener("error", () => { fab.textContent = "MB"; }, { once: true });
+  avatar.src = new URL("./assets/fab-catgirl.png", import.meta.url).href;
+  fab.appendChild(avatar);
   fab.tabIndex = 0;
   const titleOf = () => t("打开媒体浏览器（再点一次会新开一扇）");
   fab.title = titleOf();
